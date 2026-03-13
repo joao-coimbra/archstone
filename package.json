@@ -1,10 +1,17 @@
 {
   "name": "archstone",
-  "module": "index.ts",
   "type": "module",
-  "private": true,
+  "private": false,
+  "scripts": {
+    "build":          "bunup",
+    "dev":            "bunup --watch",
+    "test":           "bun test",
+    "lint":           "biome check src/",
+    "prepublishOnly": "bun run build"
+  },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "bunup": "^0.16.31"
   },
   "peerDependencies": {
     "typescript": "^5"
