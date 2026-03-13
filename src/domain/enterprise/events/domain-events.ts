@@ -38,7 +38,7 @@ class DomainEventsImplementation {
    *
    * @param aggregate - The aggregate to mark for dispatch
    */
-  markAggregateForDispatch(aggregate: AggregateRoot<unknown>) {
+  markAggregateForDispatch(aggregate: AggregateRoot<unknown>): void {
     if (!this.findMarkedAggregateByID(aggregate.id)) {
       this.markedAggregates.add(aggregate)
     }
@@ -52,7 +52,7 @@ class DomainEventsImplementation {
    *
    * @param id - The identifier of the aggregate to dispatch events for
    */
-  dispatchEventsForAggregate(id: UniqueEntityId) {
+  dispatchEventsForAggregate(id: UniqueEntityId): void {
     const aggregate = this.findMarkedAggregateByID(id)
     if (aggregate) {
       this.dispatchAggregateEvents(aggregate)
@@ -67,7 +67,7 @@ class DomainEventsImplementation {
    * @param callback - The function to invoke when the event is dispatched
    * @param eventClassName - The name of the event class to listen for
    */
-  register(callback: DomainEventCallback, eventClassName: string) {
+  register(callback: DomainEventCallback, eventClassName: string): void {
     if (!this.handlersMap.has(eventClassName)) {
       this.handlersMap.set(eventClassName, [])
     }
@@ -78,7 +78,7 @@ class DomainEventsImplementation {
    * Removes all registered event handlers.
    * Useful for test isolation.
    */
-  clearHandlers() {
+  clearHandlers(): void {
     this.handlersMap.clear()
   }
 
@@ -86,7 +86,7 @@ class DomainEventsImplementation {
    * Removes all aggregates from the dispatch list.
    * Useful for test isolation.
    */
-  clearMarkedAggregates() {
+  clearMarkedAggregates(): void {
     this.markedAggregates.clear()
   }
 
@@ -120,4 +120,5 @@ class DomainEventsImplementation {
  * Singleton instance of the domain events registry.
  * Use this to register handlers and dispatch events across the application.
  */
-export const DomainEvents = new DomainEventsImplementation()
+export const DomainEvents: DomainEventsImplementation =
+  new DomainEventsImplementation()
