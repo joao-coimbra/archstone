@@ -1,0 +1,5 @@
+export type { Creatable } from "./creatable"
+export type { Deletable } from "./deletable"
+export type { Findable } from "./findabe"
+export type { Saveable } from "./saveble"
+export type { Repository } from "./repository"
