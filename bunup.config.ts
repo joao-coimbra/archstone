@@ -9,6 +9,7 @@ export default defineConfig({
     "src/domain/enterprise/index.ts",
   ],
   format: ["esm"],
+  target: "bun",
   dts: true,
   clean: true,
   plugins: [exports()],

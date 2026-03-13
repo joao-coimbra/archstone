@@ -3,6 +3,36 @@
   "version": "1.0.0",
   "type": "module",
   "private": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "./core": {
+      "import": {
+        "types": "./dist/core/index.d.ts",
+        "default": "./dist/core/index.js"
+      }
+    },
+    "./domain": {
+      "import": {
+        "types": "./dist/domain/index.d.ts",
+        "default": "./dist/domain/index.js"
+      }
+    },
+    "./domain/application": {
+      "import": {
+        "types": "./dist/domain/application/index.d.ts",
+        "default": "./dist/domain/application/index.js"
+      }
+    },
+    "./domain/enterprise": {
+      "import": {
+        "types": "./dist/domain/enterprise/index.d.ts",
+        "default": "./dist/domain/enterprise/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "build": "bunup",
     "dev": "bunup --watch",
@@ -11,7 +41,7 @@
     "prepublishOnly": "bun run build",
     "check": "ultracite check",
     "fix": "ultracite fix",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.5",
