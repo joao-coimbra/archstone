@@ -1,17 +1,24 @@
 {
   "name": "archstone",
+  "version": "1.0.0",
   "type": "module",
   "private": false,
   "scripts": {
-    "build":          "bunup",
-    "dev":            "bunup --watch",
-    "test":           "bun test",
-    "lint":           "biome check src/",
-    "prepublishOnly": "bun run build"
+    "build": "bunup",
+    "dev": "bunup --watch",
+    "test": "bun test",
+    "lint": "biome check src/",
+    "prepublishOnly": "bun run build",
+    "check": "ultracite check",
+    "fix": "ultracite fix",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.5",
     "@types/bun": "latest",
-    "bunup": "^0.16.31"
+    "bunup": "^0.16.31",
+    "husky": "^9.1.7",
+    "ultracite": "7.3.0"
   },
   "peerDependencies": {
     "typescript": "^5"
