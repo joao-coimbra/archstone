@@ -1,7 +1,7 @@
-import type { Creatable } from "./creatable"
-import type { Deletable } from "./deletable"
-import type { Findable } from "./findabe"
-import type { Saveable } from "./saveble"
+import type { Creatable } from "./creatable.ts"
+import type { Deletable } from "./deletable.ts"
+import type { Findable } from "./findabe.ts"
+import type { Saveable } from "./saveble.ts"
 
 /**
  * Full CRUD repository contract, composing all segregated interfaces.

@@ -1,1 +1,1 @@
-export type { Optional } from "./optional"
+export type { Optional } from "./optional.ts"

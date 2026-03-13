@@ -1,2 +1,2 @@
-export * from "./repositories"
-export * from "./use-cases"
+export * from "./repositories/index.ts"
+export * from "./use-cases/index.ts"

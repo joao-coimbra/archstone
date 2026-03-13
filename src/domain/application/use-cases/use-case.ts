@@ -1,5 +1,5 @@
-import type { Either } from "@/core/either"
-import type { UseCaseError } from "./use-case.error"
+import type { Either } from "@/core/either.ts"
+import type { UseCaseError } from "./use-case.error.ts"
 
 /**
  * Represents the expected output shape of any use case.

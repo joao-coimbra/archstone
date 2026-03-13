@@ -1,2 +1,2 @@
-export { AggregateRoot } from "./aggregate-root"
-export { Entity } from "./entity"
+export { AggregateRoot } from "./aggregate-root.ts"
+export { Entity } from "./entity.ts"

@@ -1,4 +1,4 @@
-import type { UniqueEntityId } from "@/core/unique-entity-id"
+import type { UniqueEntityId } from "@/core/unique-entity-id.ts"
 
 /**
  * Base contract for all domain events.

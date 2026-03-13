@@ -1,6 +1,6 @@
-import type { DomainEvent } from "../events"
-import { DomainEvents } from "../events/domain-events"
-import { Entity } from "./entity"
+import { DomainEvents } from "../events/domain-events.ts"
+import type { DomainEvent } from "../events/index.ts"
+import { Entity } from "./entity.ts"
 
 /**
  * Base class for all aggregate roots in the domain.
