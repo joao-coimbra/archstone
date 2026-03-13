@@ -7,5 +7,10 @@
         "noBarrelFile": "off"
       }
     }
+  },
+  "javascript": {
+    "formatter": {
+      "semicolons": "asNeeded"
+    }
   }
 }
