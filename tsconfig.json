@@ -1,9 +1,7 @@
 {
   "compilerOptions": {
     // Environment setup & latest features
-    "lib": [
-      "ESNext"
-    ],
+    "lib": ["ESNext"],
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
@@ -28,18 +26,9 @@
     // Paths
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"]
     }
   },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "**/*.spec.ts",
-    "**/*.test.ts"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/*.test.ts"]
 }

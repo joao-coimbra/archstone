@@ -1,7 +1,7 @@
-import type { Creatable } from "./creatable";
-import type { Deletable } from "./deletable";
-import type { Findable } from "./findabe";
-import type { Saveable } from "./saveble";
+import type { Creatable } from "./creatable"
+import type { Deletable } from "./deletable"
+import type { Findable } from "./findabe"
+import type { Saveable } from "./saveble"
 
 /**
  * Full CRUD repository contract, composing all segregated interfaces.
@@ -29,6 +29,6 @@ import type { Saveable } from "./saveble";
  */
 export interface Repository<T>
   extends Findable<T>,
-  Saveable<T>,
-  Creatable<T>,
-  Deletable<T> { }
+    Saveable<T>,
+    Creatable<T>,
+    Deletable<T> {}

@@ -1,5 +1,5 @@
-export * from "./types"
 export { type Either, left, right } from "./either"
+export * from "./types"
 export { UniqueEntityId } from "./unique-entity-id"
 export { ValueObject } from "./value-object"
 export { WatchedList } from "./watched-list"

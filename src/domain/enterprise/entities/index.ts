@@ -1,2 +1,2 @@
-export { Entity } from "./entity"
 export { AggregateRoot } from "./aggregate-root"
+export { Entity } from "./entity"
