@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { type Either, left, right } from "./either"
+import { type Either, left, right } from "./either.ts"
 
 function doSomeThing(shouldSuccess: boolean): Either<string, number> {
   if (shouldSuccess) {
