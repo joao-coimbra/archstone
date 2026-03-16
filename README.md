@@ -1,8 +1,6 @@
 <div align="center">
 
-<br />
-
-# archstone
+# Archstone
 
 ### The TypeScript foundation for serious backend services.
 
@@ -14,8 +12,6 @@ Build on Domain-Driven Design and Clean Architecture — without writing the sam
 [![license](https://img.shields.io/badge/license-MIT-22C55E?style=for-the-badge)](./LICENSE)
 [![typescript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![bun](https://img.shields.io/badge/Bun-ready-F9F1E1?style=for-the-badge&logo=bun&logoColor=black)](https://bun.sh)
-
-<br />
 
 </div>
 
