@@ -211,10 +211,13 @@ export interface AuditRepository extends Creatable<AuditLog> {}
 
 | Import | Contents |
 |---|---|
+| `archstone` | Everything |
 | `archstone/core` | `Either`, `ValueObject`, `UniqueEntityId`, `WatchedList`, `Optional` |
 | `archstone/domain` | All domain exports |
 | `archstone/domain/enterprise` | `Entity`, `AggregateRoot`, `DomainEvent`, `DomainEvents`, `EventHandler` |
 | `archstone/domain/application` | `UseCase`, `UseCaseError`, repository contracts |
+
+All sub-paths share type declarations via a common chunk — mixing imports from multiple sub-paths is fully type-safe with no duplicate declaration conflicts.
 
 ---
 
