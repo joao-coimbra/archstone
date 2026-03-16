@@ -74,7 +74,7 @@ Sharp edges that have caused real issues — check these before assuming a bug:
 
 ## Agent Skills
 
-`skills/archstone/` ships with the package since v1.1.0. Install into any consumer project:
+`skills/use-archstone/` ships with the package since v1.1.0. Install into any consumer project:
 
 ```bash
 bun x skills add joao-coimbra/archstone

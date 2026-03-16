@@ -275,7 +275,7 @@ bun x skills add joao-coimbra/archstone
 **Or copy from the installed package:**
 
 ```bash
-cp -r node_modules/archstone/skills/archstone .claude/skills/
+cp -r node_modules/archstone/skills/use-archstone .claude/skills/
 ```
 
 ---
