@@ -13,5 +13,7 @@ export default defineConfig({
   target: "bun",
   dts: true,
   clean: true,
+  splitting: true,
+  minify: true,
   plugins: [exports()],
 })
