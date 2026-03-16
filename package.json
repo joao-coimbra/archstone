@@ -77,7 +77,7 @@
     "check": "ultracite check",
     "fix": "ultracite fix",
     "prepublishOnly": "bun run build",
-    "prepare": "husky"
+    "prepare": "bunx husky"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.5",
