@@ -280,21 +280,6 @@ cp -r node_modules/archstone/skills/archstone .claude/skills/
 
 ---
 
-## What's new
-
-### v1.1.0
-- **Agent Skills** — built-in DDD skill for AI coding agents (Claude Code, Cursor, Windsurf and others)
-- `skills/archstone/` now ships with the npm package
-
-### v1.0.4
-- Bun workspace restructure and revert — package back to single-root layout
-- CI workflow with GitHub Actions
-
-### v1.0.1
-- Initial public release
-
----
-
 <div align="center">
 
 **Built with care for the TypeScript community.**
