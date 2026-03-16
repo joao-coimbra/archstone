@@ -247,6 +247,26 @@ src/
 
 ---
 
+## Agent Skills
+
+Archstone ships with a built-in skill for AI coding agents — giving them full knowledge of DDD conventions, layer boundaries, and usage patterns so you don't have to explain them in every project.
+
+**Install with Claude Code:**
+
+```bash
+bun x skills add joao-coimbra/archstone
+```
+
+**Or copy from the installed package:**
+
+```bash
+cp -r node_modules/archstone/skills/archstone .claude/skills/
+```
+
+The skill covers: entities, aggregates, value objects, use cases, repository contracts, domain events, Either error handling, and testing patterns — all with examples and common-mistake callouts.
+
+---
+
 <div align="center">
 
 **Built with care for the TypeScript community.**
