@@ -1,232 +1,63 @@
 ---
 name: archstone
-description: Complete Archstone conventions for DDD and Clean Architecture — apply when writing entities, value objects, use cases, repositories, or domain events in a project that has archstone installed
+description: 'Apply Archstone DDD and Clean Architecture conventions. Use when developers: (1) Create domain entities, aggregates, or value objects, (2) Write application use cases, (3) Define repository contracts, (4) Work with domain events or event handlers, (5) Ask about Either, UniqueEntityId, WatchedList, or UseCaseError. Triggers on: "entity", "aggregate", "value object", "use case", "repository", "domain event", "Either", "UniqueEntityId", "archstone".'
 ---
 
-## Trigger
+## Critical: Follow Archstone Conventions
 
-Apply whenever writing code in a project that has `archstone` installed and the work touches domain objects, use cases, repositories, or any DDD/Clean Architecture concept.
+Everything you know about DDD patterns may differ from how Archstone implements them. Always follow the rules below — do not apply generic DDD patterns that contradict them.
 
----
+When working with Archstone:
+
+1. Check `node_modules/archstone/` for the installed version
+2. All entities must extend `Entity<Props>` or `AggregateRoot<Props>` — never use plain classes
+3. All value objects must extend `ValueObject<Props>`
+4. Use cases must implement `UseCase<Input, Output>` and **never throw** — always return `Either`
+5. Repository contracts are interfaces only — implementations belong in infrastructure
+6. Domain events are raised inside aggregates and dispatched after persistence — never before
+7. Use `UniqueEntityId` for all entity identifiers — never a plain `string`
+8. The left side of `Either` must `implement UseCaseError` — not `extend Error`
+
+If you are unsure about a pattern, check [Conventions Reference](references/conventions.md) before writing code.
 
 ## Layer Boundaries
 
-- `core/` — zero domain knowledge; pure language utilities (`Either`, `ValueObject`, `UniqueEntityId`, `WatchedList`)
-- `domain/enterprise/` — pure domain model; no framework or infrastructure dependencies
-- `domain/application/` — use cases and repository contracts only
-- Infrastructure (databases, HTTP, ORMs) lives **outside** these layers — never inside `domain/`
+Always respect the layer rules. Never place infrastructure code in `domain/`, and never import concrete implementations into use cases.
 
----
+See [Layer Rules](references/layers.md) for details.
 
-## Imports
+## Entities & Aggregates
 
-| What | Import path |
-|---|---|
-| `Either`, `left`, `right`, `ValueObject`, `UniqueEntityId`, `WatchedList`, `Optional` | `archstone/core` |
-| `Entity`, `AggregateRoot`, `DomainEvents`, `EventHandler` | `archstone/domain/enterprise` |
-| `UseCase`, `UseCaseError`, `Repository`, `Findable`, `Creatable`, `Saveable`, `Deletable` | `archstone/domain/application` |
+Use a static `create()` factory. Pass `id` as the second constructor argument. Use `Optional<T, K>` for auto-generated fields. See [Entity Patterns](references/entity.md).
 
----
+## Value Objects
 
-## Entity & AggregateRoot
+Use a static `create()` factory with validation. Value object `create()` may throw — wrap calls inside use cases with `try/catch` and return `left()`. See [Value Object Patterns](references/value-object.md).
 
-- Extend `Entity<Props>` for identity-only entities; extend `AggregateRoot<Props>` for entities that raise domain events
-- Always use a static `create()` factory — constructor stays `protected`
-- `id` goes in `Props` as `Optional` and is also passed as the second constructor argument
-- Use `Optional<T, K>` to mark auto-generated fields (e.g. `'id' | 'createdAt'`)
-- Use `UniqueEntityId` for all identities — never a plain `string`
-- Raise events inside the aggregate via `this.addDomainEvent()` — never outside
+## Use Cases
 
-```ts
-import { AggregateRoot } from 'archstone/domain/enterprise'
-import { UniqueEntityId, type Optional } from 'archstone/core'
-
-interface OrderProps {
-  customerId: UniqueEntityId
-  total: number
-  createdAt: Date
-}
-
-class Order extends AggregateRoot<OrderProps> {
-  get customerId() { return this.props.customerId }
-  get total()      { return this.props.total }
-
-  static create(props: Optional<OrderProps, 'createdAt'>, id?: UniqueEntityId): Order {
-    const order = new Order(
-      { ...props, createdAt: props.createdAt ?? new Date() },
-      id ?? new UniqueEntityId(),
-    )
-    order.addDomainEvent(new OrderCreatedEvent(order))
-    return order
-  }
-}
-```
-
-**Mistake:** Adding `id: string` in Props, not passing id as the second constructor arg, or using a plain class instead of `Entity`/`AggregateRoot`.
-
----
-
-## ValueObject
-
-- Extend `ValueObject<Props>`
-- Static `create()` factory with validation — may throw on invalid input (intentional)
-- Never mutate `this.props` — return a new instance instead
-- Compare with `.equals()` — never `===`
-
-```ts
-import { ValueObject } from 'archstone/core'
-
-interface EmailProps { value: string }
-
-class Email extends ValueObject<EmailProps> {
-  get value() { return this.props.value }
-
-  static create(raw: string): Email {
-    if (!raw.includes('@')) throw new Error('Invalid email address')
-    return new Email({ value: raw.toLowerCase().trim() })
-  }
-}
-
-const a = Email.create('user@example.com')
-const b = Email.create('user@example.com')
-a.equals(b) // true — compared by value, not reference
-```
-
-**Mistake:** Using `===` to compare value objects, or mutating `this.props` directly.
-
----
-
-## UseCase + Either
-
-- Implement `UseCase<Input, Output>`
-- Output is always `Either<UseCaseError, Value>` — **never throw**
-- The left side must be a class that `implements UseCaseError` (requires `message: string`) — not `extends Error`
-- When constructing value objects inside a use case, wrap in `try/catch` and return `left()`
-- Inject repositories via constructor typed as the **interface**, not the concrete class
-
-```ts
-import type { UseCase, UseCaseError } from 'archstone/domain/application'
-import { Either, left, right } from 'archstone/core'
-
-class UserNotFoundError implements UseCaseError {
-  message = 'User not found.'
-}
-
-class InvalidEmailError implements UseCaseError {
-  message = 'Invalid email address.'
-}
-
-type Input  = { userId: string; newEmail: string }
-type Output = Either<UserNotFoundError | InvalidEmailError, User>
-
-class UpdateUserEmailUseCase implements UseCase<Input, Output> {
-  constructor(private readonly repo: UserRepository) {} // interface, not concrete
-
-  async execute({ userId, newEmail }: Input): Promise<Output> {
-    const user = await this.repo.findById(userId)
-    if (!user) return left(new UserNotFoundError())
-
-    try {
-      const email = Email.create(newEmail) // may throw
-      user.updateEmail(email)
-    } catch {
-      return left(new InvalidEmailError())
-    }
-
-    await this.repo.save(user)
-    return right(user)
-  }
-}
-```
-
-**Mistake:** Using `left(new Error('...'))`, throwing instead of returning `left()`, or injecting a concrete repository class.
-
----
+Implement `UseCase<Input, Output>`. Return `left()` for errors, `right()` for success. Error classes must `implement UseCaseError`. See [Use Case Patterns](references/use-case.md).
 
 ## Repository Contracts
 
-- Interfaces only — never place implementations inside `domain/`
-- Extend `Repository<T>` for full CRUD, or compose granular interfaces:
-  - `Findable<T>` — `findById(id: string)` — takes `string`; pass `entity.id.toValue()`
-  - `Creatable<T>` — `create(entity: T)`
-  - `Saveable<T>` — `save(entity: T)`
-  - `Deletable<T>` — `delete(entity: T)` — takes full entity, not an id
-- Implementations belong in infrastructure — inject as the interface type
-
-```ts
-import type { Repository, Creatable } from 'archstone/domain/application'
-
-export interface UserRepository extends Repository<User> {
-  findByEmail(email: string): Promise<User | null>
-}
-
-// Compose only what you need
-export interface AuditRepository extends Creatable<AuditLog> {}
-```
-
-**Mistake:** Importing a concrete repository inside a use case, or passing `UniqueEntityId` to `findById` (it takes `string` — use `.toValue()`).
-
----
+Define as interfaces only. Use `Repository<T>` or compose `Findable`, `Creatable`, `Saveable`, `Deletable`. Note: `findById` takes `string` — pass `entity.id.toValue()`. See [Repository Patterns](references/repository.md).
 
 ## Domain Events
 
-- Raise events inside the aggregate via `this.addDomainEvent()`
-- Dispatch **after** successful persistence — never before
-- Define handlers as classes that `implement EventHandler` with `setupSubscriptions(): void`
-- Call `handler.setupSubscriptions()` in the infrastructure composition root (bootstrap) before the first request
-- After persisting, call `DomainEvents.dispatchEventsForAggregate(aggregate.id)` — argument is `UniqueEntityId`
-- `aggregate.clearEvents()` is called **internally** by `dispatchEventsForAggregate` — do not call it manually
-- Test isolation: call `DomainEvents.clearHandlers()` and `DomainEvents.clearMarkedAggregates()` in `beforeEach`
-
-```ts
-import type { EventHandler } from 'archstone/domain/enterprise'
-import { DomainEvents } from 'archstone/domain/enterprise'
-
-class OnUserCreated implements EventHandler {
-  constructor(private readonly mailer: Mailer) {}
-
-  setupSubscriptions(): void {
-    DomainEvents.register(
-      (event) => this.handle(event as UserCreatedEvent),
-      UserCreatedEvent.name,
-    )
-  }
-
-  private async handle(event: UserCreatedEvent): Promise<void> {
-    await this.mailer.send(event.user.email.value)
-  }
-}
-
-// Composition root
-new OnUserCreated(mailer).setupSubscriptions()
-
-// Inside repository, after persisting
-await this.db.insert(user)
-DomainEvents.dispatchEventsForAggregate(user.id) // UniqueEntityId, not string
-```
-
-**Mistake:** Dispatching before persistence, passing `user.id.toValue()` to `dispatchEventsForAggregate`, or calling `clearEvents()` manually.
-
----
+Raise inside the aggregate via `addDomainEvent()`. Dispatch after persistence via `DomainEvents.dispatchEventsForAggregate(aggregate.id)`. Define handlers as classes implementing `EventHandler`. See [Domain Event Patterns](references/domain-events.md).
 
 ## Testing
 
-- Use `bun:test` — import `test`, `expect`, `beforeEach` from `bun:test`
-- Test files: `*.spec.ts` co-located with the source file
-- Use in-memory repository implementations for use case tests
+Use `bun:test`. Co-locate test files as `*.spec.ts`. Use in-memory repository implementations. See [Testing Patterns](references/testing.md).
 
-```ts
-import { test, expect, beforeEach } from 'bun:test'
+## References
 
-const repo = new InMemoryUserRepository()
-const useCase = new GetUserUseCase(repo)
-
-test('returns user when found', async () => {
-  const user = User.create({ name: 'João' })
-  await repo.create(user)
-
-  const result = await useCase.execute({ userId: user.id.toValue() })
-
-  expect(result.isRight()).toBe(true)
-})
-```
+- [Conventions](references/conventions.md) — quick rules summary
+- [Imports](references/imports.md) — import paths for all exports
+- [Layers](references/layers.md) — layer boundary rules
+- [Entity Patterns](references/entity.md) — Entity and AggregateRoot examples
+- [Value Object Patterns](references/value-object.md) — ValueObject examples
+- [Use Case Patterns](references/use-case.md) — UseCase and Either examples
+- [Repository Patterns](references/repository.md) — repository interface and in-memory examples
+- [Domain Event Patterns](references/domain-events.md) — EventHandler and dispatch examples
+- [Testing Patterns](references/testing.md) — bun:test and in-memory repo examples
