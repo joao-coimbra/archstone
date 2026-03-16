@@ -1,10 +1,32 @@
 # archstone
 
-A TypeScript-first architecture foundation for backend services, built around Domain-Driven Design (DDD) and Clean Architecture principles.
+[![npm version](https://img.shields.io/npm/v/archstone?style=flat-square)](https://www.npmjs.com/package/archstone)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](./LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Bun](https://img.shields.io/badge/Bun-runtime-black?style=flat-square&logo=bun)](https://bun.sh)
+
+> TypeScript architecture foundation for backend services based on Domain-Driven Design (DDD) and Clean Architecture.
 
 Archstone provides the core building blocks — entities, value objects, aggregates, domain events, use cases, and repository contracts — so you can focus on your domain logic instead of re-implementing the same structural patterns across every project.
 
-## Layers
+## Installation
+
+```bash
+bun add archstone
+# or
+npm install archstone
+```
+
+## Packages
+
+| Import path | Contents |
+|---|---|
+| `archstone/core` | `Either`, `ValueObject`, `UniqueEntityId`, `WatchedList`, `Optional` |
+| `archstone/domain` | All domain exports |
+| `archstone/domain/enterprise` | `Entity`, `AggregateRoot`, `DomainEvent`, `DomainEvents`, `EventHandler` |
+| `archstone/domain/application` | `UseCase`, `UseCaseError`, repository contracts |
+
+## Architecture
 
 ```
 src/
@@ -45,7 +67,7 @@ src/
 Use cases never throw. They return an `Either<Error, Value>` — left for failure, right for success.
 
 ```ts
-import { Either, left, right } from "@/core/either"
+import { Either, left, right } from "archstone/core"
 
 type Result = Either<UserNotFoundError, User>
 
@@ -65,9 +87,8 @@ else console.log(result.value)                    // User
 Entities are defined by identity. Aggregates extend that with domain event support.
 
 ```ts
-import { AggregateRoot } from "@/domain/enterprise/entities/aggregate-root"
-import { UniqueEntityId } from "@/core/unique-entity-id"
-import { Optional } from "@/core/types/optional"
+import { AggregateRoot } from "archstone/domain/enterprise"
+import { UniqueEntityId, Optional } from "archstone/core"
 
 interface OrderProps {
   customerId: UniqueEntityId
@@ -94,7 +115,7 @@ class Order extends AggregateRoot<OrderProps> {
 Value objects are equal by their properties, not by reference.
 
 ```ts
-import { ValueObject } from "@/core/value-object"
+import { ValueObject } from "archstone/core"
 
 interface EmailProps { value: string }
 
@@ -113,6 +134,8 @@ class Email extends ValueObject<EmailProps> {
 Track additions and removals in a collection without rewriting the whole thing on save.
 
 ```ts
+import { WatchedList } from "archstone/core"
+
 class TagList extends WatchedList<Tag> {
   compareItems(a: Tag, b: Tag) { return a.id.equals(b.id) }
 }
@@ -130,6 +153,8 @@ tags.getRemovedItems() // [existingTag]
 Events are raised inside aggregates and dispatched by the infrastructure layer after successful persistence.
 
 ```ts
+import { DomainEvents } from "archstone/domain/enterprise"
+
 // register a handler
 DomainEvents.register(
   (event) => sendWelcomeEmail(event as UserCreatedEvent),
@@ -146,6 +171,8 @@ DomainEvents.dispatchEventsForAggregate(user.id)
 Repositories are defined as interfaces in the application layer. Implementations live in infrastructure.
 
 ```ts
+import { Repository, Creatable } from "archstone/domain/application"
+
 // application/repositories/user-repository.ts
 export interface UserRepository extends Repository<User> {
   findByEmail(email: string): Promise<User | null>
@@ -155,19 +182,10 @@ export interface UserRepository extends Repository<User> {
 export interface AuditRepository extends Creatable<AuditLog> {}
 ```
 
-## Getting Started
+## Contributing
 
-```bash
-bun install
-bun test
-```
-
-## Tech
-
-- [Bun](https://bun.sh) — runtime, bundler, and test runner
-- TypeScript 5 with strict mode
-- Zero runtime dependencies
+Contributions are welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) first.
 
 ## License
 
-MIT
+MIT — see [LICENSE](./LICENSE).
