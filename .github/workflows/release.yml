@@ -25,7 +25,7 @@ jobs:
         run: bun run build
 
       - name: Create dist zip
-        run: zip -r archstone-${{ github.ref_name }}-dist.zip dist/
+        run: zip -r archstone-${{ github.ref_name }}.zip dist/
 
       - name: Get tag message
         id: tag_message
@@ -37,4 +37,4 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           body: ${{ steps.tag_message.outputs.body }}
-          files: archstone-${{ github.ref_name }}-dist.zip
+          files: archstone-${{ github.ref_name }}.zip
