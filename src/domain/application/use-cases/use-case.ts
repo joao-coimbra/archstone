@@ -1,4 +1,4 @@
-import type { Either } from "@/core/either.ts"
+import type { Either } from "@/core/index.ts"
 import type { UseCaseError } from "./use-case.error.ts"
 
 /**

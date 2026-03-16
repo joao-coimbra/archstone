@@ -11,7 +11,7 @@ export default defineConfig({
   ],
   format: ["esm"],
   target: "bun",
-  dts: true,
+  dts: { splitting: true },
   clean: true,
   splitting: true,
   minify: true,

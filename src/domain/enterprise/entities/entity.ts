@@ -1,4 +1,4 @@
-import { UniqueEntityId } from "@/core/unique-entity-id.ts"
+import { UniqueEntityId } from "@/core/index.ts"
 
 /**
  * Base class for all domain entities.

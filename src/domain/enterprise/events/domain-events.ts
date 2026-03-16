@@ -1,4 +1,4 @@
-import type { UniqueEntityId } from "@/core/unique-entity-id.ts"
+import type { UniqueEntityId } from "@/core/index.ts"
 import type { AggregateRoot } from "../entities/aggregate-root.ts"
 import type { DomainEvent } from "./domain-event.ts"
 
