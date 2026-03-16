@@ -186,6 +186,10 @@ export interface AuditRepository extends Creatable<AuditLog> {}
 
 Contributions are welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) first.
 
+## Code of Conduct
+
+This project follows the [Contributor Covenant](./CODE_OF_CONDUCT.md).
+
 ## License
 
 MIT — see [LICENSE](./LICENSE).
