@@ -65,3 +65,11 @@ test("example", () => {
 import { Either } from "@/core/either"
 import { Entity } from "@/domain/enterprise/entities/entity"
 ```
+
+## Contributing Workflow
+
+- Branch naming: `feat/<name>`, `fix/<name>`, `docs/<name>`, `chore/<name>`
+- Commit style: Conventional Commits (feat, fix, chore, docs, refactor, test)
+- All commits must pass `bun test` and `bun x ultracite fix` before pushing
+- See [CONTRIBUTING.md](./CONTRIBUTING.md) for full contributor guidelines
+- Publish: bump version with `bun pm version patch|minor|major`, then `bun publish --access public`
