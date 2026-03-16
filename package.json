@@ -1,7 +1,7 @@
 {
   "name": "archstone",
   "description": "TypeScript architecture foundation for backend services based on Domain-Driven Design and Clean Architecture",
-  "version": "1.2.1-rc.0",
+  "version": "1.2.1",
   "type": "module",
   "private": false,
   "files": [

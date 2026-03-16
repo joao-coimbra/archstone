@@ -55,9 +55,16 @@ test("example", () => {
 
 `@/` resolves to `src/` — use it for all internal imports.
 
+Always import from the **entry-point index**, never from deep file paths. Deep imports cause the dts bundler to inline type declarations into each sub-path bundle, which breaks TypeScript's nominal typing when a consumer mixes sub-path imports.
+
 ```ts
-import { Either } from "@/core/either"
-import { Entity } from "@/domain/enterprise/entities/entity"
+// ✅ correct — import from entry-point index
+import { Either } from "@/core/index.ts"
+import { UniqueEntityId } from "@/core/index.ts"
+
+// ❌ wrong — deep path causes dts inlining and type conflicts
+import { Either } from "@/core/either.ts"
+import { UniqueEntityId } from "@/core/unique-entity-id.ts"
 ```
 
 ## Gotchas
@@ -71,6 +78,7 @@ Sharp edges that have caused real issues — check these before assuming a bug:
 - `clearEvents()` is called internally by `dispatchEventsForAggregate` — never call it manually
 - `EventHandler` is an interface — `implements EventHandler`, not `extends`
 - `bun publish` does not add `node_modules/.bin` to PATH for lifecycle scripts — use `bunx <binary>` in scripts
+- Internal imports must use entry-point indices (`@/core/index.ts`), not deep paths — deep paths cause the dts bundler to inline type declarations into each sub-path bundle, which breaks TypeScript's nominal typing for types with `private` fields (e.g. `UniqueEntityId`) when consumers mix sub-path imports
 
 ## Agent Skills
 
