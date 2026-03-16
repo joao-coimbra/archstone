@@ -1,92 +1,17 @@
 {
-  "name": "archstone",
-  "description": "TypeScript architecture foundation for backend services based on Domain-Driven Design and Clean Architecture",
-  "version": "1.0.4",
-  "type": "module",
-  "private": false,
-  "files": [
-    "dist"
+  "private": true,
+  "workspaces": [
+    "packages/*"
   ],
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      }
-    },
-    "./core": {
-      "import": {
-        "types": "./dist/core/index.d.ts",
-        "default": "./dist/core/index.js"
-      }
-    },
-    "./domain": {
-      "import": {
-        "types": "./dist/domain/index.d.ts",
-        "default": "./dist/domain/index.js"
-      }
-    },
-    "./domain/application": {
-      "import": {
-        "types": "./dist/domain/application/index.d.ts",
-        "default": "./dist/domain/application/index.js"
-      }
-    },
-    "./domain/enterprise": {
-      "import": {
-        "types": "./dist/domain/enterprise/index.d.ts",
-        "default": "./dist/domain/enterprise/index.js"
-      }
-    },
-    "./package.json": "./package.json"
-  },
-  "keywords": [
-    "ddd",
-    "domain-driven-design",
-    "clean-architecture",
-    "typescript",
-    "entity",
-    "aggregate",
-    "value-object",
-    "either",
-    "domain-events",
-    "repository",
-    "use-case",
-    "bun"
-  ],
-  "author": {
-    "name": "João Henrique Benatti Coimbra",
-    "url": "https://github.com/joao-coimbra"
-  },
-  "license": "MIT",
-  "homepage": "https://github.com/joao-coimbra/archstone#readme",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/joao-coimbra/archstone.git"
-  },
-  "bugs": {
-    "url": "https://github.com/joao-coimbra/archstone/issues"
-  },
   "scripts": {
-    "build": "bunup",
-    "dev": "bunup --watch",
     "test": "bun test",
-    "lint": "biome check src/",
-    "prepublishOnly": "bun run build",
     "check": "ultracite check",
     "fix": "ultracite fix",
-    "prepare": "husky || true"
+    "prepare": "husky"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.5",
-    "@types/bun": "latest",
-    "bunup": "^0.16.31",
     "husky": "^9.1.7",
     "ultracite": "7.3.0"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
   }
 }
