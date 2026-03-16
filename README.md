@@ -1,15 +1,22 @@
+<div align="center">
+
 # archstone
 
-[![npm version](https://img.shields.io/npm/v/archstone?style=flat-square)](https://www.npmjs.com/package/archstone)
-[![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](./LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Bun](https://img.shields.io/badge/Bun-runtime-black?style=flat-square&logo=bun)](https://bun.sh)
+**TypeScript architecture foundation for backend services.**
+Stop re-implementing DDD boilerplate. Focus on your domain.
 
-> TypeScript architecture foundation for backend services based on Domain-Driven Design (DDD) and Clean Architecture.
+[![npm](https://img.shields.io/npm/v/archstone?style=flat-square&color=black)](https://www.npmjs.com/package/archstone)
+[![license](https://img.shields.io/badge/license-MIT-black?style=flat-square)](./LICENSE)
+[![typescript](https://img.shields.io/badge/TypeScript-5-black?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![bun](https://img.shields.io/badge/Bun-runtime-black?style=flat-square&logo=bun)](https://bun.sh)
 
-Archstone provides the core building blocks — entities, value objects, aggregates, domain events, use cases, and repository contracts — so you can focus on your domain logic instead of re-implementing the same structural patterns across every project.
+</div>
 
-## Installation
+---
+
+Archstone gives you the structural pieces of **Domain-Driven Design** and **Clean Architecture** — entities, value objects, aggregates, domain events, use cases, and repository contracts — so every project starts from a solid, consistent foundation.
+
+## Install
 
 ```bash
 bun add archstone
@@ -17,57 +24,24 @@ bun add archstone
 npm install archstone
 ```
 
-## Packages
+## At a Glance
 
-| Import path | Contents |
+| Building block | What it does |
 |---|---|
-| `archstone/core` | `Either`, `ValueObject`, `UniqueEntityId`, `WatchedList`, `Optional` |
-| `archstone/domain` | All domain exports |
-| `archstone/domain/enterprise` | `Entity`, `AggregateRoot`, `DomainEvent`, `DomainEvents`, `EventHandler` |
-| `archstone/domain/application` | `UseCase`, `UseCaseError`, repository contracts |
+| `Entity` / `AggregateRoot` | Identity-based domain objects; aggregates raise domain events |
+| `ValueObject` | Equality by value, not reference |
+| `UniqueEntityId` | UUID v7 identity wrapper |
+| `WatchedList` | Tracks additions and removals in a collection |
+| `Either` | Functional error handling — no throwing in use cases |
+| `UseCase` | Contract for application use cases returning `Either` |
+| `Repository` | CRUD interface contracts — implementations live in infra |
 
-## Architecture
+## Usage
 
-```
-src/
-├── core/          # Language-level utilities with no domain knowledge
-│   ├── either.ts              # Functional error handling (Left / Right)
-│   ├── value-object.ts        # Base class for value objects
-│   ├── unique-entity-id.ts    # UUID v7 identity wrapper
-│   ├── watched-list.ts        # Change-tracked collection for aggregates
-│   └── types/
-│       └── optional.ts        # Optional<T, K> utility type
-│
-└── domain/
-    ├── enterprise/            # Pure domain model — no framework deps
-    │   ├── entities/
-    │   │   ├── entity.ts          # Identity-based base entity
-    │   │   └── aggregate-root.ts  # Event-raising aggregate base
-    │   └── events/
-    │       ├── domain-event.ts    # DomainEvent interface
-    │       ├── domain-events.ts   # Singleton registry & dispatcher
-    │       └── event-handler.ts   # EventHandler interface
-    │
-    └── application/           # Orchestration — use cases & repository contracts
-        ├── use-cases/
-        │   ├── use-case.ts        # UseCase<Input, Output> interface
-        │   └── use-case.error.ts  # Base error type for use case failures
-        └── repositories/
-            ├── repository.ts      # Full CRUD contract (composed)
-            ├── findabe.ts         # Findable<T>
-            ├── creatable.ts       # Creatable<T>
-            ├── saveble.ts         # Saveable<T>
-            └── deletable.ts       # Deletable<T>
-```
-
-## Core Concepts
-
-### Either — functional error handling
-
-Use cases never throw. They return an `Either<Error, Value>` — left for failure, right for success.
+### Either — handle errors without throwing
 
 ```ts
-import { Either, left, right } from "archstone/core"
+import { Either, left, right } from 'archstone/core'
 
 type Result = Either<UserNotFoundError, User>
 
@@ -77,18 +51,20 @@ async function findUser(id: string): Promise<Result> {
   return right(user)
 }
 
-const result = await findUser("123")
-if (result.isLeft()) console.error(result.value) // UserNotFoundError
-else console.log(result.value)                    // User
+const result = await findUser('123')
+
+if (result.isLeft()) {
+  console.error(result.value) // UserNotFoundError
+} else {
+  console.log(result.value)   // User
+}
 ```
 
-### Entity & AggregateRoot
-
-Entities are defined by identity. Aggregates extend that with domain event support.
+### Entity & AggregateRoot — model your domain
 
 ```ts
-import { AggregateRoot } from "archstone/domain/enterprise"
-import { UniqueEntityId, Optional } from "archstone/core"
+import { AggregateRoot } from 'archstone/domain/enterprise'
+import { UniqueEntityId, Optional } from 'archstone/core'
 
 interface OrderProps {
   customerId: UniqueEntityId
@@ -98,24 +74,23 @@ interface OrderProps {
 
 class Order extends AggregateRoot<OrderProps> {
   get customerId() { return this.props.customerId }
-  get total() { return this.props.total }
+  get total()      { return this.props.total }
 
-  static create(props: Optional<OrderProps, "createdAt">): Order {
-    const order = new Order(
-      { ...props, createdAt: props.createdAt ?? new Date() },
-    )
+  static create(props: Optional<OrderProps, 'createdAt'>): Order {
+    const order = new Order({
+      ...props,
+      createdAt: props.createdAt ?? new Date(),
+    })
     order.addDomainEvent(new OrderCreatedEvent(order))
     return order
   }
 }
 ```
 
-### ValueObject
-
-Value objects are equal by their properties, not by reference.
+### ValueObject — equality by value
 
 ```ts
-import { ValueObject } from "archstone/core"
+import { ValueObject } from 'archstone/core'
 
 interface EmailProps { value: string }
 
@@ -123,18 +98,20 @@ class Email extends ValueObject<EmailProps> {
   get value() { return this.props.value }
 
   static create(raw: string): Email {
-    if (!raw.includes("@")) throw new Error("Invalid email")
+    if (!raw.includes('@')) throw new Error('Invalid email')
     return new Email({ value: raw.toLowerCase() })
   }
 }
+
+const a = Email.create('user@example.com')
+const b = Email.create('user@example.com')
+a.equals(b) // true
 ```
 
-### WatchedList
-
-Track additions and removals in a collection without rewriting the whole thing on save.
+### WatchedList — track collection changes
 
 ```ts
-import { WatchedList } from "archstone/core"
+import { WatchedList } from 'archstone/core'
 
 class TagList extends WatchedList<Tag> {
   compareItems(a: Tag, b: Tag) { return a.id.equals(b.id) }
@@ -148,48 +125,82 @@ tags.getNewItems()     // [newTag]
 tags.getRemovedItems() // [existingTag]
 ```
 
-### Domain Events
-
-Events are raised inside aggregates and dispatched by the infrastructure layer after successful persistence.
+### Domain Events — decouple side effects
 
 ```ts
-import { DomainEvents } from "archstone/domain/enterprise"
+import { DomainEvents } from 'archstone/domain/enterprise'
 
-// register a handler
+// Register a handler
 DomainEvents.register(
   (event) => sendWelcomeEmail(event as UserCreatedEvent),
   UserCreatedEvent.name,
 )
 
-// infrastructure dispatches after persisting
+// Dispatch after persisting the aggregate
 await userRepository.create(user)
 DomainEvents.dispatchEventsForAggregate(user.id)
 ```
 
-### Repository Contracts
-
-Repositories are defined as interfaces in the application layer. Implementations live in infrastructure.
+### Repository Contracts — keep infra out of your domain
 
 ```ts
-import { Repository, Creatable } from "archstone/domain/application"
+import { Repository, Creatable } from 'archstone/domain/application'
 
-// application/repositories/user-repository.ts
+// Compose the interface you need
 export interface UserRepository extends Repository<User> {
   findByEmail(email: string): Promise<User | null>
 }
 
-// or compose only what you need
+// Or only what you need
 export interface AuditRepository extends Creatable<AuditLog> {}
 ```
 
-## Contributing
+## Package Exports
 
-Contributions are welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) first.
+```
+archstone/core              → Either, ValueObject, UniqueEntityId, WatchedList, Optional
+archstone/domain            → all domain exports
+archstone/domain/enterprise → Entity, AggregateRoot, DomainEvent, DomainEvents, EventHandler
+archstone/domain/application → UseCase, UseCaseError, repository contracts
+```
 
-## Code of Conduct
+## Layer Architecture
 
-This project follows the [Contributor Covenant](./CODE_OF_CONDUCT.md).
+```
+src/
+├── core/                   # Zero domain knowledge — pure utilities
+│   ├── either.ts
+│   ├── value-object.ts
+│   ├── unique-entity-id.ts
+│   ├── watched-list.ts
+│   └── types/optional.ts
+│
+└── domain/
+    ├── enterprise/         # Pure domain model — no framework deps
+    │   ├── entities/
+    │   │   ├── entity.ts
+    │   │   └── aggregate-root.ts
+    │   └── events/
+    │       ├── domain-event.ts
+    │       ├── domain-events.ts
+    │       └── event-handler.ts
+    │
+    └── application/        # Use cases & repository contracts
+        ├── use-cases/
+        │   ├── use-case.ts
+        │   └── use-case.error.ts
+        └── repositories/
+            ├── repository.ts
+            ├── findable.ts
+            ├── creatable.ts
+            ├── saveable.ts
+            └── deletable.ts
+```
 
-## License
+---
 
-MIT — see [LICENSE](./LICENSE).
+<div align="center">
+
+[Contributing](./CONTRIBUTING.md) · [Code of Conduct](./CODE_OF_CONDUCT.md) · [MIT License](./LICENSE)
+
+</div>
