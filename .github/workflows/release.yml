@@ -27,10 +27,14 @@ jobs:
       - name: Create dist zip
         run: zip -r archstone-${{ github.ref_name }}-dist.zip dist/
 
+      - name: Get tag message
+        id: tag_message
+        run: echo "body=$(git tag -l --format='%(contents)' ${{ github.ref_name }})" >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
-          body_from_tag: true
+          body: ${{ steps.tag_message.outputs.body }}
           files: archstone-${{ github.ref_name }}-dist.zip
