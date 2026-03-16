@@ -17,11 +17,15 @@ Build on Domain-Driven Design and Clean Architecture — without writing the sam
 
 <br />
 
+[Quick Start](#install) · [Why Archstone](#why-archstone) · [Usage](#usage) · [Agent Skills](#agent-skills-new-in-v110) · [Architecture](#architecture) · [Contributing](./CONTRIBUTING.md)
+
+<br />
+
 </div>
 
 ---
 
-## Why archstone?
+## Why Archstone?
 
 Every backend project in DDD needs the same structural pieces — and most teams rewrite them from scratch each time. Archstone gives you a **battle-tested, zero-dependency set of base classes and contracts** so you can skip the boilerplate and go straight to modeling your domain.
 
@@ -39,13 +43,16 @@ async function createUser(): Promise<Either<NotFoundError, User>> { ... }
 
 ## Features
 
-- **`Either`** — functional error handling; use cases never throw
-- **`Entity` / `AggregateRoot`** — identity-based domain objects with built-in event support
-- **`ValueObject`** — equality by value, not reference
-- **`UniqueEntityId`** — UUID v7 identity, consistent across your entire domain
-- **`WatchedList`** — track additions and removals in collections without overwriting persistence
-- **`UseCase`** — typed contract for application logic
-- **Repository contracts** — define your interface in the domain; implement in infrastructure
+| | |
+|---|---|
+| **`Either`** | Functional error handling — use cases never throw |
+| **`Entity` / `AggregateRoot`** | Identity-based domain objects with built-in event support |
+| **`ValueObject`** | Equality by value, not reference |
+| **`UniqueEntityId`** | UUID v7 identity, consistent across your entire domain |
+| **`WatchedList`** | Track additions and removals in collections without overwriting persistence |
+| **`UseCase`** | Typed contract for application logic that always returns `Either` |
+| **Repository contracts** | Define your interface in the domain — implement anywhere in infrastructure |
+| **Agent Skills** | Built-in AI skill so your coding agent knows every DDD convention |
 
 ---
 
@@ -247,9 +254,17 @@ src/
 
 ---
 
-## Agent Skills
+## Agent Skills — new in v1.1.0
 
-Archstone ships with a built-in skill for AI coding agents — giving them full knowledge of DDD conventions, layer boundaries, and usage patterns so you don't have to explain them in every project.
+Archstone ships with a built-in skill for AI coding agents. Once installed, your agent understands every DDD convention, layer boundary, and usage pattern — without you ever having to explain them.
+
+**The skill covers:**
+- Entities, aggregates, and value objects
+- Use cases with `Either` error handling
+- Repository contracts and in-memory implementations
+- Domain events — raising, dispatching, and handling
+- Testing patterns with `bun:test` and in-memory repos
+- Common mistakes and how to avoid them
 
 **Install with Claude Code:**
 
@@ -262,8 +277,6 @@ bun x skills add joao-coimbra/archstone
 ```bash
 cp -r node_modules/archstone/skills/archstone .claude/skills/
 ```
-
-The skill covers: entities, aggregates, value objects, use cases, repository contracts, domain events, Either error handling, and testing patterns — all with examples and common-mistake callouts.
 
 ---
 
