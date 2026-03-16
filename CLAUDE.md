@@ -19,16 +19,10 @@ Use **Bun** exclusively — do not use Node.js, npm, yarn, or pnpm.
 |------|---------|
 | Install dependencies | `bun install` |
 | Run tests | `bun test` |
-| Execute a file | `bun <file>` |
-| Run a script | `bun run <script>` |
-| Build | `bun build <file>` |
-
-- `Bun.serve()` — HTTP/WebSocket server (not express)
-- `bun:sqlite` — SQLite (not better-sqlite3)
-- `Bun.sql` — Postgres (not pg)
-- `Bun.redis` — Redis (not ioredis)
-- `Bun.file` — file I/O (not node:fs)
-- Bun auto-loads `.env` — do not use dotenv
+| Build | `bun run build` |
+| Lint & format | `bun x ultracite fix` |
+| Publish | `bun publish --access public` |
+| Bump version | `bun pm version patch\|minor\|major` |
 
 ## Code Conventions
 
@@ -64,6 +58,26 @@ test("example", () => {
 ```ts
 import { Either } from "@/core/either"
 import { Entity } from "@/domain/enterprise/entities/entity"
+```
+
+## Gotchas
+
+Sharp edges that have caused real issues — check these before assuming a bug:
+
+- `UseCaseError` must be `implements UseCaseError`, **not** `extends Error`
+- `Deletable<T>.delete()` takes the full entity, not an id
+- `DomainEvents.dispatchEventsForAggregate()` takes `UniqueEntityId`, not a string — never pass `.toValue()`
+- `Findable<T>.findById()` takes `string` — pass `id.toValue()`, not the `UniqueEntityId` object
+- `clearEvents()` is called internally by `dispatchEventsForAggregate` — never call it manually
+- `EventHandler` is an interface — `implements EventHandler`, not `extends`
+- `bun publish` does not add `node_modules/.bin` to PATH for lifecycle scripts — use `bunx <binary>` in scripts
+
+## Agent Skills
+
+`skills/archstone/` ships with the package since v1.1.0. Install into any consumer project:
+
+```bash
+bun x skills add joao-coimbra/archstone
 ```
 
 ## Contributing Workflow
