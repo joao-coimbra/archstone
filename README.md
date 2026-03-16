@@ -1,20 +1,53 @@
 <div align="center">
 
+<br />
+
 # archstone
 
-**TypeScript architecture foundation for backend services.**
-Stop re-implementing DDD boilerplate. Focus on your domain.
+### The TypeScript foundation for serious backend services.
 
-[![npm](https://img.shields.io/npm/v/archstone?style=flat-square&color=black)](https://www.npmjs.com/package/archstone)
-[![license](https://img.shields.io/badge/license-MIT-black?style=flat-square)](./LICENSE)
-[![typescript](https://img.shields.io/badge/TypeScript-5-black?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![bun](https://img.shields.io/badge/Bun-runtime-black?style=flat-square&logo=bun)](https://bun.sh)
+Build on Domain-Driven Design and Clean Architecture — without writing the same boilerplate on every project.
+
+<br />
+
+[![npm version](https://img.shields.io/npm/v/archstone?style=for-the-badge&logo=npm&color=CB3837&logoColor=white)](https://www.npmjs.com/package/archstone)
+[![license](https://img.shields.io/badge/license-MIT-22C55E?style=for-the-badge)](./LICENSE)
+[![typescript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![bun](https://img.shields.io/badge/Bun-ready-F9F1E1?style=for-the-badge&logo=bun&logoColor=black)](https://bun.sh)
+
+<br />
 
 </div>
 
 ---
 
-Archstone gives you the structural pieces of **Domain-Driven Design** and **Clean Architecture** — entities, value objects, aggregates, domain events, use cases, and repository contracts — so every project starts from a solid, consistent foundation.
+## Why archstone?
+
+Every backend project in DDD needs the same structural pieces — and most teams rewrite them from scratch each time. Archstone gives you a **battle-tested, zero-dependency set of base classes and contracts** so you can skip the boilerplate and go straight to modeling your domain.
+
+```ts
+// ❌ Before — scattered, inconsistent, no error contract
+class User { id: string }
+function createUser() { throw new Error('not found') }
+
+// ✅ After — structured, predictable, type-safe
+class User extends AggregateRoot<UserProps> { ... }
+async function createUser(): Promise<Either<NotFoundError, User>> { ... }
+```
+
+---
+
+## Features
+
+- **`Either`** — functional error handling; use cases never throw
+- **`Entity` / `AggregateRoot`** — identity-based domain objects with built-in event support
+- **`ValueObject`** — equality by value, not reference
+- **`UniqueEntityId`** — UUID v7 identity, consistent across your entire domain
+- **`WatchedList`** — track additions and removals in collections without overwriting persistence
+- **`UseCase`** — typed contract for application logic
+- **Repository contracts** — define your interface in the domain; implement in infrastructure
+
+---
 
 ## Install
 
@@ -24,43 +57,39 @@ bun add archstone
 npm install archstone
 ```
 
-## At a Glance
+> Zero runtime dependencies. Pure TypeScript.
 
-| Building block | What it does |
-|---|---|
-| `Entity` / `AggregateRoot` | Identity-based domain objects; aggregates raise domain events |
-| `ValueObject` | Equality by value, not reference |
-| `UniqueEntityId` | UUID v7 identity wrapper |
-| `WatchedList` | Tracks additions and removals in a collection |
-| `Either` | Functional error handling — no throwing in use cases |
-| `UseCase` | Contract for application use cases returning `Either` |
-| `Repository` | CRUD interface contracts — implementations live in infra |
+---
 
 ## Usage
 
-### Either — handle errors without throwing
+### `Either` — stop throwing, start returning
 
 ```ts
 import { Either, left, right } from 'archstone/core'
 
-type Result = Either<UserNotFoundError, User>
+type FindUserResult = Either<UserNotFoundError, User>
 
-async function findUser(id: string): Promise<Result> {
+async function findUser(id: string): Promise<FindUserResult> {
   const user = await repo.findById(id)
+
   if (!user) return left(new UserNotFoundError(id))
   return right(user)
 }
 
+// The caller always handles both cases — no surprises
 const result = await findUser('123')
 
 if (result.isLeft()) {
   console.error(result.value) // UserNotFoundError
 } else {
-  console.log(result.value)   // User
+  console.log(result.value)   // User ✓
 }
 ```
 
-### Entity & AggregateRoot — model your domain
+---
+
+### `Entity` & `AggregateRoot` — model your domain
 
 ```ts
 import { AggregateRoot } from 'archstone/domain/enterprise'
@@ -81,13 +110,17 @@ class Order extends AggregateRoot<OrderProps> {
       ...props,
       createdAt: props.createdAt ?? new Date(),
     })
+
+    // Raise domain events from inside the aggregate
     order.addDomainEvent(new OrderCreatedEvent(order))
     return order
   }
 }
 ```
 
-### ValueObject — equality by value
+---
+
+### `ValueObject` — equality that makes sense
 
 ```ts
 import { ValueObject } from 'archstone/core'
@@ -105,10 +138,13 @@ class Email extends ValueObject<EmailProps> {
 
 const a = Email.create('user@example.com')
 const b = Email.create('user@example.com')
-a.equals(b) // true
+
+a.equals(b) // ✅ true — compared by value, not reference
 ```
 
-### WatchedList — track collection changes
+---
+
+### `WatchedList` — persist only what changed
 
 ```ts
 import { WatchedList } from 'archstone/core'
@@ -121,62 +157,74 @@ const tags = new TagList([existingTag])
 tags.add(newTag)
 tags.remove(existingTag)
 
-tags.getNewItems()     // [newTag]
-tags.getRemovedItems() // [existingTag]
+// Send only the diff to your repository — not the whole list
+tags.getNewItems()     // → [newTag]
+tags.getRemovedItems() // → [existingTag]
 ```
+
+---
 
 ### Domain Events — decouple side effects
 
 ```ts
 import { DomainEvents } from 'archstone/domain/enterprise'
 
-// Register a handler
+// Register handlers anywhere in your infrastructure layer
 DomainEvents.register(
   (event) => sendWelcomeEmail(event as UserCreatedEvent),
   UserCreatedEvent.name,
 )
 
-// Dispatch after persisting the aggregate
+// Dispatch after persistence — events stay inside the aggregate until then
 await userRepository.create(user)
 DomainEvents.dispatchEventsForAggregate(user.id)
 ```
 
-### Repository Contracts — keep infra out of your domain
+---
+
+### Repository Contracts — keep infrastructure out of your domain
 
 ```ts
 import { Repository, Creatable } from 'archstone/domain/application'
 
-// Compose the interface you need
+// Define your contract in the application layer
 export interface UserRepository extends Repository<User> {
   findByEmail(email: string): Promise<User | null>
 }
 
-// Or only what you need
+// Compose only what you need
 export interface AuditRepository extends Creatable<AuditLog> {}
+
+// Implement anywhere in infrastructure — domain stays clean
 ```
+
+---
 
 ## Package Exports
 
-```
-archstone/core              → Either, ValueObject, UniqueEntityId, WatchedList, Optional
-archstone/domain            → all domain exports
-archstone/domain/enterprise → Entity, AggregateRoot, DomainEvent, DomainEvents, EventHandler
-archstone/domain/application → UseCase, UseCaseError, repository contracts
-```
+| Import | Contents |
+|---|---|
+| `archstone/core` | `Either`, `ValueObject`, `UniqueEntityId`, `WatchedList`, `Optional` |
+| `archstone/domain` | All domain exports |
+| `archstone/domain/enterprise` | `Entity`, `AggregateRoot`, `DomainEvent`, `DomainEvents`, `EventHandler` |
+| `archstone/domain/application` | `UseCase`, `UseCaseError`, repository contracts |
 
-## Layer Architecture
+---
+
+## Architecture
 
 ```
 src/
-├── core/                   # Zero domain knowledge — pure utilities
-│   ├── either.ts
-│   ├── value-object.ts
-│   ├── unique-entity-id.ts
-│   ├── watched-list.ts
-│   └── types/optional.ts
+├── core/                    # Zero domain knowledge — pure language utilities
+│   ├── either.ts            # Left / Right functional result type
+│   ├── value-object.ts      # Value equality base class
+│   ├── unique-entity-id.ts  # UUID v7 identity wrapper
+│   ├── watched-list.ts      # Change-tracked collection
+│   └── types/
+│       └── optional.ts      # Optional<T, K> helper type
 │
 └── domain/
-    ├── enterprise/         # Pure domain model — no framework deps
+    ├── enterprise/          # Pure domain model — zero framework dependencies
     │   ├── entities/
     │   │   ├── entity.ts
     │   │   └── aggregate-root.ts
@@ -185,7 +233,7 @@ src/
     │       ├── domain-events.ts
     │       └── event-handler.ts
     │
-    └── application/        # Use cases & repository contracts
+    └── application/         # Orchestration — use cases & repository contracts
         ├── use-cases/
         │   ├── use-case.ts
         │   └── use-case.error.ts
@@ -200,6 +248,8 @@ src/
 ---
 
 <div align="center">
+
+**Built with care for the TypeScript community.**
 
 [Contributing](./CONTRIBUTING.md) · [Code of Conduct](./CODE_OF_CONDUCT.md) · [MIT License](./LICENSE)
 
