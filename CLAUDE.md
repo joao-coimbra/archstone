@@ -109,7 +109,7 @@ Master is branch-protected — all changes go through PRs. Follow this order exa
    git checkout -b release/v<x.y.z>
    git push -u origin release/v<x.y.z>
    gh pr create ...
-   gh pr merge <number> --merge --delete-branch
+   gh pr merge <number> --merge
    git checkout master && git pull
    ```
 5. Create an **annotated** tag (the GA reads its message for the GitHub Release body):
