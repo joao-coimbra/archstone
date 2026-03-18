@@ -94,6 +94,47 @@ bun x skills add joao-coimbra/archstone
 - Commit style: Conventional Commits (feat, fix, chore, docs, refactor, test)
 - All commits must pass `bun test` and `bun x ultracite fix` before pushing
 - See [CONTRIBUTING.md](./CONTRIBUTING.md) for full contributor guidelines
-- Publish stable: bump version with `bun pm version patch|minor|major`, then `bun run release`
-- Publish RC (pre-release): bump with `bun pm version prerelease --preid rc`, then `bun run release --tag next`
-- dist-tags: `latest` → stable, `next` → rc/pre-release (never use `rc` as a tag — it's deprecated)
+
+## Release Workflow
+
+Master is branch-protected — all changes go through PRs. Follow this order exactly:
+
+### Stable release (RC → x.y.z)
+
+1. Commit any doc/CLAUDE.md changes needed
+2. Bump version (working tree must be clean): `bun pm version <x.y.z>`
+3. Publish to npm: `bun run release` — uses `latest` dist-tag
+4. Push the version bump via PR:
+   ```
+   git checkout -b release/v<x.y.z>
+   git push -u origin release/v<x.y.z>
+   gh pr create ...
+   gh pr merge <number> --squash --delete-branch
+   git checkout master && git pull
+   ```
+5. Create an **annotated** tag (the GA reads its message for the GitHub Release body):
+   ```
+   git tag -a v<x.y.z> -m "v<x.y.z>\n\n- change 1\n- change 2"
+   ```
+6. Push the tag individually — **never** `git push --tags` (pushes unwanted local tags):
+   ```
+   git push origin v<x.y.z>
+   ```
+
+### RC / pre-release
+
+1. Bump: `bun pm version prerelease --preid rc`
+2. Publish: `bun run release --tag next` — uses `next` dist-tag
+3. Commit + push via PR as normal — **do not create git tags for RC versions**
+
+### dist-tags
+
+- `latest` → stable releases
+- `next` → RC/pre-release
+- Never use `rc` as a dist-tag (deprecated)
+
+### GA workflows
+
+- **CI**: runs on every push to master and PRs — lint + tests
+- **Release**: triggers on tag push `v*` — builds, zips dist, creates GitHub Release using the tag annotation as the body
+- The GA does **not** publish to npm — that is always done locally before tagging
