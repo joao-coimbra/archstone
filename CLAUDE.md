@@ -76,7 +76,7 @@ Sharp edges that have caused real issues — check these before assuming a bug:
 - `DomainEvents.dispatchEventsForAggregate()` takes `UniqueEntityId`, not a string — never pass `.toValue()`
 - `Findable<T>.findById()` takes `string` — pass `id.toValue()`, not the `UniqueEntityId` object
 - `clearEvents()` is called internally by `dispatchEventsForAggregate` — never call it manually
-- `EventHandler` is an interface — `implements EventHandler`, not `extends`
+- `EventHandler<T>` is a generic interface — `implements EventHandler<YourEvent>`, not `extends`; requires both `setupSubscriptions()` and `handle(event: T): Promise<void>`
 - `bun publish` does not add `node_modules/.bin` to PATH for lifecycle scripts — use `bunx <binary>` in scripts
 - Internal imports must use entry-point indices (`@/core/index.ts`), not deep paths — deep paths cause the dts bundler to inline type declarations into each sub-path bundle, which breaks TypeScript's nominal typing for types with `private` fields (e.g. `UniqueEntityId`) when consumers mix sub-path imports
 
