@@ -76,6 +76,7 @@
     "test": "bun test",
     "check": "ultracite check",
     "fix": "ultracite fix",
+    "release": "bun publish --access public",
     "prepublishOnly": "bun run build",
     "prepare": "bunx husky"
   },
