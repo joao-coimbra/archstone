@@ -1,35 +1,53 @@
+import type { DomainEvent } from "./domain-event.ts"
+
 /**
- * Base contract for all event handlers.
+ * Base contract for all domain event handlers.
  *
  * An event handler is responsible for subscribing to domain events
- * and executing side effects in response — such as sending emails,
- * updating read models, or triggering external integrations.
+ * and executing side effects in response — such as persisting records,
+ * broadcasting WebSocket messages, sending emails, or triggering
+ * external integrations.
  *
- * All handlers must implement {@link setupSubscriptions} to register
- * their callbacks in the {@link DomainEvents} registry.
+ * Implement {@link setupSubscriptions} to register callbacks in the
+ * {@link DomainEvents} registry, and {@link handle} to define the
+ * reaction logic for the subscribed event.
+ *
+ * @typeParam T - The specific {@link DomainEvent} this handler reacts to.
  *
  * @example
  * ```ts
- * class OnUserCreated implements EventHandler {
- *   constructor(private readonly mailer: Mailer) {}
+ * class OnUserCreated implements EventHandler<UserCreatedEvent> {
+ *   constructor(private readonly mailer: Mailer) {
+ *     this.setupSubscriptions()
+ *   }
  *
  *   setupSubscriptions(): void {
  *     DomainEvents.register(
- *       (event) => this.sendWelcomeEmail(event as UserCreatedEvent),
+ *       this.handle.bind(this),
  *       UserCreatedEvent.name,
  *     )
  *   }
  *
- *   private async sendWelcomeEmail(event: UserCreatedEvent): Promise<void> {
+ *   async handle(event: UserCreatedEvent): Promise<void> {
  *     await this.mailer.send(event.user.email)
  *   }
  * }
  * ```
  */
-export interface EventHandler {
+export interface EventHandler<T extends DomainEvent> {
   /**
    * Registers all event subscriptions for this handler.
-   * Should be called once during application bootstrap.
+   *
+   * Should be called once during instantiation — typically
+   * in the constructor — to ensure the handler is active
+   * before any events are dispatched.
    */
   setupSubscriptions(): void
+
+  /**
+   * Executes the handler logic in response to a dispatched event.
+   *
+   * @param event - The domain event instance that was dispatched.
+   */
+  handle(event: T): Promise<void>
 }

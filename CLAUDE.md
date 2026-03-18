@@ -94,4 +94,6 @@ bun x skills add joao-coimbra/archstone
 - Commit style: Conventional Commits (feat, fix, chore, docs, refactor, test)
 - All commits must pass `bun test` and `bun x ultracite fix` before pushing
 - See [CONTRIBUTING.md](./CONTRIBUTING.md) for full contributor guidelines
-- Publish: bump version with `bun pm version patch|minor|major`, then `bun publish --access public`
+- Publish stable: bump version with `bun pm version patch|minor|major`, then `bun run release`
+- Publish RC (pre-release): bump with `bun pm version prerelease --preid rc`, then `bun run release --tag next`
+- dist-tags: `latest` → stable, `next` → rc/pre-release (never use `rc` as a tag — it's deprecated)
