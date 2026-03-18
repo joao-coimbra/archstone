@@ -44,7 +44,7 @@ Define as interfaces only. Use `Repository<T>` or compose `Findable`, `Creatable
 
 ## Domain Events
 
-Raise inside the aggregate via `addDomainEvent()`. Dispatch after persistence via `DomainEvents.dispatchEventsForAggregate(aggregate.id)`. Define handlers as classes implementing `EventHandler`. See [Domain Event Patterns](references/domain-events.md).
+Raise inside the aggregate via `addDomainEvent()`. Dispatch after persistence via `DomainEvents.dispatchEventsForAggregate(aggregate.id)`. Define handlers as classes implementing `EventHandler<T>`. See [Domain Event Patterns](references/domain-events.md).
 
 ## Testing
 
