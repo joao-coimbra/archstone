@@ -174,13 +174,25 @@ tags.getRemovedItems() // → [existingTag]
 ### Domain Events — decouple side effects
 
 ```ts
-import { DomainEvents } from 'archstone/domain/enterprise'
+import type { EventHandler } from 'archstone/core'
+import { DomainEvents } from 'archstone/core'
 
-// Register handlers anywhere in your infrastructure layer
-DomainEvents.register(
-  (event) => sendWelcomeEmail(event as UserCreatedEvent),
-  UserCreatedEvent.name,
-)
+class OnUserCreated implements EventHandler<UserCreatedEvent> {
+  constructor(private readonly mailer: Mailer) {
+    this.setupSubscriptions()
+  }
+
+  setupSubscriptions(): void {
+    DomainEvents.register(this.handle.bind(this), UserCreatedEvent.name)
+  }
+
+  async handle(event: UserCreatedEvent): Promise<void> {
+    await this.mailer.send(event.user.email.value)
+  }
+}
+
+// Instantiate in infrastructure — handler self-registers via constructor
+new OnUserCreated(mailer)
 
 // Dispatch after persistence — events stay inside the aggregate until then
 await userRepository.create(user)
@@ -212,9 +224,9 @@ export interface AuditRepository extends Creatable<AuditLog> {}
 | Import | Contents |
 |---|---|
 | `archstone` | Everything |
-| `archstone/core` | `Either`, `ValueObject`, `UniqueEntityId`, `WatchedList`, `Optional` |
+| `archstone/core` | `Either`, `ValueObject`, `UniqueEntityId`, `WatchedList`, `Optional`, `EventHandler` |
 | `archstone/domain` | All domain exports |
-| `archstone/domain/enterprise` | `Entity`, `AggregateRoot`, `DomainEvent`, `DomainEvents`, `EventHandler` |
+| `archstone/domain/enterprise` | `Entity`, `AggregateRoot`, `DomainEvent`, `DomainEvents` |
 | `archstone/domain/application` | `UseCase`, `UseCaseError`, repository contracts |
 
 All sub-paths share type declarations via a common chunk — mixing imports from multiple sub-paths is fully type-safe with no duplicate declaration conflicts.
