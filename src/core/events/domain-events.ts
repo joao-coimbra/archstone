@@ -4,8 +4,14 @@ import type { DomainEvent } from "./domain-event.ts"
 
 /**
  * Callback function invoked when a domain event is dispatched.
+ *
+ * The bivariant method signature allows handlers typed to a specific
+ * `DomainEvent` subtype to be registered — TypeScript enforces strict
+ * contravariance on function types but not on method signatures.
  */
-type DomainEventCallback = (event: DomainEvent) => void
+type DomainEventCallback = {
+  bivarianceHack(event: DomainEvent): Promise<void>
+}["bivarianceHack"]
 
 /**
  * Central registry and dispatcher for domain events.

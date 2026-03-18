@@ -4,8 +4,8 @@
 
 - Raise events inside the aggregate via `this.addDomainEvent()`
 - Dispatch **after** successful persistence — never before
-- Define handlers as classes implementing `EventHandler` with `setupSubscriptions(): void`
-- Register handlers in the infrastructure composition root before the first request
+- Define handlers as classes implementing `EventHandler<T>` from `archstone/core` with `setupSubscriptions()` and `handle(event: T)`
+- Call `setupSubscriptions()` in the constructor — just instantiate the handler in the composition root
 - Dispatch via `DomainEvents.dispatchEventsForAggregate(aggregate.id)` — argument is `UniqueEntityId`
 - `clearEvents()` is called internally by `dispatchEventsForAggregate` — do not call manually
 - Test isolation: call `DomainEvents.clearHandlers()` and `DomainEvents.clearMarkedAggregates()` in `beforeEach`
@@ -28,20 +28,22 @@ class User extends AggregateRoot<UserProps> {
 ## Defining a Handler
 
 ```ts
-import type { EventHandler } from 'archstone/domain/enterprise'
-import { DomainEvents } from 'archstone/domain/enterprise'
+import type { EventHandler } from 'archstone/core'
+import { DomainEvents } from 'archstone/core'
 
-class OnUserCreated implements EventHandler {
-  constructor(private readonly mailer: Mailer) {}
+class OnUserCreated implements EventHandler<UserCreatedEvent> {
+  constructor(private readonly mailer: Mailer) {
+    this.setupSubscriptions()
+  }
 
   setupSubscriptions(): void {
     DomainEvents.register(
-      (event) => this.handle(event as UserCreatedEvent),
+      this.handle.bind(this),
       UserCreatedEvent.name,
     )
   }
 
-  private async handle(event: UserCreatedEvent): Promise<void> {
+  async handle(event: UserCreatedEvent): Promise<void> {
     await this.mailer.send(event.user.email.value)
   }
 }
@@ -59,8 +61,8 @@ async create(user: User): Promise<void> {
 ## Composition Root Registration
 
 ```ts
-// Called once at app startup — in infrastructure, never in domain
-new OnUserCreated(mailer).setupSubscriptions()
+// setupSubscriptions() is called in the constructor — just instantiate
+new OnUserCreated(mailer)
 ```
 
 ## Common Mistakes

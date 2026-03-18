@@ -2,6 +2,14 @@
 export {
   type DomainEvent,
   DomainEvents,
-  type EventHandler,
-} from "@/core/events/index.ts"
+} from "@/core/index.ts"
+
 export * from "./entities/index.ts"
+
+/**
+ * @deprecated use `EventHandler` from `archstone/core` instead.
+ * The new version supports generic typing via `EventHandler<T>`.
+ */
+export interface EventHandler {
+  setupSubscriptions(): void
+}
