@@ -1,4 +1,5 @@
 export { type Either, left, right } from "./either.ts"
+export * from "./events/index.ts"
 export * from "./types/index.ts"
 export { UniqueEntityId } from "./unique-entity-id.ts"
 export { ValueObject } from "./value-object.ts"

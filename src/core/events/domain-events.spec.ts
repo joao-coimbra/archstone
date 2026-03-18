@@ -1,8 +1,10 @@
 import { describe, expect, it, mock } from "bun:test"
-import type { UniqueEntityId } from "@/core/unique-entity-id.ts"
-import { AggregateRoot } from "../entities/aggregate-root.ts"
-import type { DomainEvent } from "./domain-event.ts"
-import { DomainEvents } from "./domain-events.ts"
+import {
+  type DomainEvent,
+  DomainEvents,
+  type UniqueEntityId,
+} from "@/core/index.ts"
+import { AggregateRoot } from "@/domain/enterprise/index.ts"
 
 class CustomAggregateCreated implements DomainEvent {
   occurredAt: Date
