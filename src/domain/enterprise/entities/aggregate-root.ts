@@ -1,5 +1,4 @@
-import { DomainEvents } from "../events/domain-events.ts"
-import type { DomainEvent } from "../events/index.ts"
+import { type DomainEvent, DomainEvents } from "@/core/index.ts"
 import { Entity } from "./entity.ts"
 
 /**
