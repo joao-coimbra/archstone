@@ -269,6 +269,73 @@ src/
 
 ---
 
+## Technology Stack
+
+| | |
+|---|---|
+| **Language** | TypeScript 5+ |
+| **Runtime / Package Manager** | [Bun](https://bun.sh) (required) |
+| **Test Framework** | `bun:test` (built-in) |
+| **Build Tool** | [bunup](https://github.com/nicepkg/bunup) |
+| **Linter / Formatter** | [Biome](https://biomejs.dev) via [Ultracite](https://ultracite.dev) |
+| **Dependencies** | None (zero runtime dependencies) |
+
+---
+
+## Development Workflow
+
+Requirements: **Bun >= 1.0**
+
+```bash
+bun install          # install dev dependencies
+bun test             # run tests
+bun run build        # compile to dist/
+bun x ultracite fix  # lint + format
+```
+
+Branch naming: `feat/<name>`, `fix/<name>`, `docs/<name>`, `chore/<name>`
+
+Every commit must pass `bun test` and `bun x ultracite fix` before pushing.
+
+---
+
+## Coding Standards
+
+- **Error handling:** never throw inside use cases — always return `left(error)` with `Either`
+- **Imports:** always import from a layer's index (`archstone/core`, `archstone/domain/enterprise`), never from deep paths
+- **Layer boundaries:** inner layers never import outer ones — `core` has zero domain knowledge, `enterprise` never imports `application`
+- **Factories:** always provide a static `create()` factory on entities and value objects — never expose constructors directly
+- **Style:** no semicolons, 2-space indent, double quotes (enforced by Biome via Ultracite)
+- **Commits:** [Conventional Commits](https://www.conventionalcommits.org/) — `feat`, `fix`, `chore`, `docs`, `refactor`, `test`
+
+---
+
+## Testing
+
+Framework: `bun:test`. Test files are `*.spec.ts` co-located with the source they test.
+
+```ts
+import { test, expect } from "bun:test"
+
+test("example", () => {
+  expect(1).toBe(1)
+})
+```
+
+Use **in-memory repository implementations** for use case tests — never couple tests to a real database. Isolate domain event state between tests:
+
+```ts
+import { DomainEvents } from "archstone/core"
+import { beforeEach } from "bun:test"
+
+beforeEach(() => {
+  DomainEvents.clearHandlers()
+  DomainEvents.clearMarkedAggregates()
+})
+```
+
+---
+
 ## Agent Skills — new in v1.1.0
 
 Archstone ships with a built-in skill for AI coding agents. Once installed, your agent understands every DDD convention, layer boundary, and usage pattern — without you ever having to explain them.
