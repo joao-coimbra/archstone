@@ -39,6 +39,16 @@ class DomainEventsImplementation {
   private readonly markedAggregates = new Set<AggregateRoot<unknown>>()
 
   /**
+   * Controls whether event dispatching is active.
+   *
+   * Set to `false` in tests that construct aggregates but do not want
+   * side-effects to run, without having to clear and re-register handlers.
+   *
+   * @default true
+   */
+  shouldRun = true
+
+  /**
    * Marks an aggregate root to have its events dispatched.
    * Called automatically by {@link AggregateRoot.addDomainEvent}.
    *
@@ -96,7 +106,7 @@ class DomainEventsImplementation {
     this.markedAggregates.clear()
   }
 
-  private dispatchAggregateEvents(aggregate: AggregateRoot<unknown>) {
+  private dispatchAggregateEvents(aggregate: AggregateRoot<unknown>): void {
     for (const event of aggregate.domainEvents) {
       this.dispatch(event)
     }
@@ -114,7 +124,11 @@ class DomainEventsImplementation {
     return [...this.markedAggregates].find((a) => a.id.equals(id))
   }
 
-  private dispatch(event: DomainEvent) {
+  private dispatch(event: DomainEvent): void {
+    if (!this.shouldRun) {
+      return
+    }
+
     const handlers = this.handlersMap.get(event.constructor.name) ?? []
     for (const handler of handlers) {
       handler(event)

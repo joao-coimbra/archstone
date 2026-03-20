@@ -1,4 +1,4 @@
-import { describe, expect, it, mock } from "bun:test"
+import { afterEach, describe, expect, it, mock } from "bun:test"
 import {
   type DomainEvent,
   DomainEvents,
@@ -31,6 +31,12 @@ class CustomAggregate extends AggregateRoot<null> {
 }
 
 describe("Domain Events", () => {
+  afterEach(() => {
+    DomainEvents.clearHandlers()
+    DomainEvents.clearMarkedAggregates()
+    DomainEvents.shouldRun = true
+  })
+
   it("should be able to dispatch and listen to events", () => {
     const callbackSpy = mock()
 
@@ -50,5 +56,18 @@ describe("Domain Events", () => {
     expect(callbackSpy).toHaveBeenCalled()
 
     expect(aggregate.domainEvents).toHaveLength(0)
+  })
+
+  it("should not dispatch events when shouldRun is false", () => {
+    const callbackSpy = mock()
+
+    DomainEvents.register(callbackSpy, CustomAggregateCreated.name)
+    DomainEvents.shouldRun = false
+
+    const aggregate = CustomAggregate.create()
+
+    DomainEvents.dispatchEventsForAggregate(aggregate.id)
+
+    expect(callbackSpy).not.toHaveBeenCalled()
   })
 })
