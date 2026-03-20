@@ -224,9 +224,9 @@ export interface AuditRepository extends Creatable<AuditLog> {}
 | Import | Contents |
 |---|---|
 | `archstone` | Everything |
-| `archstone/core` | `Either`, `ValueObject`, `UniqueEntityId`, `WatchedList`, `Optional`, `EventHandler` |
+| `archstone/core` | `Either`, `ValueObject`, `UniqueEntityId`, `WatchedList`, `Optional`, `DomainEvent`, `DomainEvents`, `EventHandler` |
 | `archstone/domain` | All domain exports |
-| `archstone/domain/enterprise` | `Entity`, `AggregateRoot`, `DomainEvent`, `DomainEvents` |
+| `archstone/domain/enterprise` | `Entity`, `AggregateRoot` |
 | `archstone/domain/application` | `UseCase`, `UseCaseError`, repository contracts |
 
 All sub-paths share type declarations via a common chunk — mixing imports from multiple sub-paths is fully type-safe with no duplicate declaration conflicts.
@@ -242,18 +242,18 @@ src/
 │   ├── value-object.ts      # Value equality base class
 │   ├── unique-entity-id.ts  # UUID v7 identity wrapper
 │   ├── watched-list.ts      # Change-tracked collection
+│   ├── events/
+│   │   ├── domain-event.ts  # Marker interface for all domain events
+│   │   ├── domain-events.ts # Central registry and dispatcher (singleton)
+│   │   └── event-handler.ts # Generic handler interface EventHandler<T>
 │   └── types/
 │       └── optional.ts      # Optional<T, K> helper type
 │
 └── domain/
     ├── enterprise/          # Pure domain model — zero framework dependencies
-    │   ├── entities/
-    │   │   ├── entity.ts
-    │   │   └── aggregate-root.ts
-    │   └── events/
-    │       ├── domain-event.ts
-    │       ├── domain-events.ts
-    │       └── event-handler.ts
+    │   └── entities/
+    │       ├── entity.ts
+    │       └── aggregate-root.ts
     │
     └── application/         # Orchestration — use cases & repository contracts
         ├── use-cases/
@@ -364,7 +364,7 @@ cp -r node_modules/archstone/skills/use-archstone .claude/skills/
 
 <div align="center">
 
-**Built with care for the TypeScript community.**
+**Built with ❤️ for the TypeScript community.**
 
 [Contributing](./CONTRIBUTING.md) · [Code of Conduct](./CODE_OF_CONDUCT.md) · [MIT License](./LICENSE)
 
