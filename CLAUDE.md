@@ -122,12 +122,43 @@ git checkout master && git pull
 
 ### Stable Release
 
+**Tag message format** — the Release GA uses the tag message verbatim as the GitHub Release body. Write it as:
+
+```
+v<x.y.z> — <one-line summary of the release>
+
+<one or two sentences describing the problem solved or the motivation>
+
+Changes:
+- <concrete change 1 — what was done and why it matters>
+- <concrete change 2>
+```
+
+Example:
+
+```
+v1.3.1 — Add shouldRun flag to DomainEvents for test control
+
+Adds a shouldRun property to DomainEventsImplementation so tests can disable
+event dispatching without clearing and re-registering handlers. Also adds
+afterEach isolation and dedicated shouldRun coverage to the spec.
+
+Changes:
+- Add shouldRun = true flag — set to false to suppress dispatch in tests
+- Add afterEach cleanup (clearHandlers, clearMarkedAggregates, reset shouldRun)
+- Add test asserting handlers are not called when shouldRun is false
+```
+
 ```bash
 bun pm version <x.y.z>
 # bun pm version creates an annotated tag automatically, but with no changelog.
-# Always delete and recreate it with bullets before doing anything else:
+# Always delete and recreate it with a proper message before doing anything else:
 git tag -d v<x.y.z>
-git tag -a v<x.y.z> -m "v<x.y.z>
+git tag -a v<x.y.z> -m "v<x.y.z> — <summary>
+
+<motivation paragraph>
+
+Changes:
 - change 1
 - change 2"
 
