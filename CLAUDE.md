@@ -92,12 +92,12 @@ Use in-memory repository implementations for use case tests — never couple tes
 
 ## Merge Procedure
 
-- Never `--squash` — rewrites history and diverges local branches on `git pull`
+- Always merge pull requests using **Squash and Merge** (`--squash`)
 - Never `--delete-branch` — the repo auto-deletes merged branches
 - Always sync master after merge
 
 ```bash
-gh pr merge <number> --merge
+gh pr merge <number> --squash
 git checkout master && git pull
 ```
 
@@ -108,7 +108,7 @@ git checkout -b <type>/<name>
 # ... commits ...
 git push -u origin <type>/<name>
 gh pr create --title "<title>" --body "<body>"
-gh pr merge <number> --merge
+gh pr merge <number> --squash
 git checkout master && git pull
 ```
 
