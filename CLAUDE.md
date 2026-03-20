@@ -124,17 +124,22 @@ git checkout master && git pull
 
 ```bash
 bun pm version <x.y.z>
+# bun pm version creates an annotated tag automatically, but with no changelog.
+# Always delete and recreate it with bullets before doing anything else:
+git tag -d v<x.y.z>
+git tag -a v<x.y.z> -m "v<x.y.z>
+- change 1
+- change 2"
+
 bun run release                          # publishes to npm with dist-tag latest
 
 git checkout -b release/v<x.y.z>
 git push -u origin release/v<x.y.z>
 gh pr create --title "chore: release v<x.y.z>" --body "..."
-gh pr merge <number> --merge
+gh pr merge <number> --squash --auto     # auto-merges after CI passes
+# wait for merge confirmation, then:
 git checkout master && git pull
 
-git tag -a v<x.y.z> -m "v<x.y.z>
-- change 1
-- change 2"
 git push origin v<x.y.z>
 ```
 
