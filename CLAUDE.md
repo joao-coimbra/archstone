@@ -25,7 +25,7 @@ Three layers, each with a strict dependency rule — inner layers never import o
 ├─────────────────────────────────────────┤
 │  domain / enterprise                    │ ← entities, aggregates, value objects
 ├─────────────────────────────────────────┤
-│  core                                   │ ← Either, ValueObject, UniqueEntityId…
+│  core                                   │ ← Either, Maybe, ValueObject, UniqueEntityId…
 └─────────────────────────────────────────┘
 ```
 
@@ -62,11 +62,11 @@ Use **Bun** exclusively — never Node.js, npm, yarn, or pnpm.
 
 ```ts
 // ✅ correct
-import { Either } from "@/core/index.ts"
-import { Entity } from "@/domain/enterprise/index.ts"
+import { Either } from "@/core/index"
+import { Entity } from "@/domain/enterprise/index"
 
 // ❌ wrong — deep path breaks dts bundling
-import { Either } from "@/core/either.ts"
+import { ValueObject } from "@/core/value-object"
 ```
 
 ## Testing
