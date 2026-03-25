@@ -91,6 +91,6 @@
   "type": "module",
   "types": "./dist/index.d.ts",
   "dependencies": {
-    "failcraft": "^1.4.0"
+    "failcraft": "^1.4.1"
   }
 }
