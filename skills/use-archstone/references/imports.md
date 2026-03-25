@@ -2,7 +2,8 @@
 
 | What | Import path |
 |---|---|
-| `Either`, `left`, `right` | `archstone/core` |
+| `Either`, `Left`, `Right`, `left`, `right`, `attempt`, `from` | `archstone/core` |
+| `Maybe`, `Just`, `Nothing`, `just`, `nothing`, `maybe` | `archstone/core` |
 | `ValueObject` | `archstone/core` |
 | `UniqueEntityId` | `archstone/core` |
 | `WatchedList` | `archstone/core` |
