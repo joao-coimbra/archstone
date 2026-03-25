@@ -5,7 +5,7 @@
     "": {
       "name": "archstone",
       "dependencies": {
-        "failcraft": "^1.4.2",
+        "failcraft": "^1.4.3",
       },
       "devDependencies": {
         "@biomejs/biome": "2.4.5",
@@ -188,7 +188,7 @@
 
     "detect-libc": ["detect-libc@2.1.2", "", {}, "sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ=="],
 
-    "failcraft": ["failcraft@1.4.2", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-w6ElW3B5leUFPYgcAbbYFew48yEX5d5qga884as8NyQG/ct6JaKqbjnbBcC60M/ZVSl7VKcdfxL7Hkx4cPMf8Q=="],
+    "failcraft": ["failcraft@1.4.3", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-IEJvC65WVtTN/voNSMBxQ8RbeMvHgJCo6xpHROyhztEWNMbPCUE4q4A1z9kpo3QjV+JMjB6Sq4HZV/PXxbfz3A=="],
 
     "glob": ["glob@13.0.6", "", { "dependencies": { "minimatch": "^10.2.2", "minipass": "^7.1.3", "path-scurry": "^2.0.2" } }, "sha512-Wjlyrolmm8uDpm/ogGyXZXb1Z+Ca2B8NbJwqBVg0axK9GbBeoS7yGV6vjXnYdGm6X53iehEuxxbyiKp8QmN4Vw=="],
 
