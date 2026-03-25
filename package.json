@@ -1,15 +1,25 @@
 {
   "name": "archstone",
-  "description": "TypeScript architecture foundation for backend services based on Domain-Driven Design and Clean Architecture",
-  "version": "1.3.1",
-  "type": "module",
-  "private": false,
-  "files": [
-    "dist",
-    "skills"
-  ],
+  "version": "1.4.0",
+  "author": {
+    "name": "João Henrique Benatti Coimbra",
+    "url": "https://github.com/joao-coimbra"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joao-coimbra/archstone.git"
+  },
   "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "devDependencies": {
+    "@biomejs/biome": "2.4.5",
+    "@types/bun": "latest",
+    "bunup": "^0.16.31",
+    "husky": "^9.1.7",
+    "ultracite": "7.3.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
   "exports": {
     ".": {
       "import": {
@@ -43,6 +53,15 @@
     },
     "./package.json": "./package.json"
   },
+  "bugs": {
+    "url": "https://github.com/joao-coimbra/archstone/issues"
+  },
+  "description": "TypeScript architecture foundation for backend services based on Domain-Driven Design and Clean Architecture",
+  "files": [
+    "dist",
+    "skills"
+  ],
+  "homepage": "https://github.com/joao-coimbra/archstone#readme",
   "keywords": [
     "ddd",
     "domain-driven-design",
@@ -57,19 +76,8 @@
     "use-case",
     "bun"
   ],
-  "author": {
-    "name": "João Henrique Benatti Coimbra",
-    "url": "https://github.com/joao-coimbra"
-  },
   "license": "MIT",
-  "homepage": "https://github.com/joao-coimbra/archstone#readme",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/joao-coimbra/archstone.git"
-  },
-  "bugs": {
-    "url": "https://github.com/joao-coimbra/archstone/issues"
-  },
+  "private": false,
   "scripts": {
     "build": "bunup",
     "dev": "bunup --watch",
@@ -80,14 +88,9 @@
     "prepublishOnly": "bun run build",
     "prepare": "bunx husky"
   },
-  "devDependencies": {
-    "@biomejs/biome": "2.4.5",
-    "@types/bun": "latest",
-    "bunup": "^0.16.31",
-    "husky": "^9.1.7",
-    "ultracite": "7.3.0"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "dependencies": {
+    "failcraft": "^1.3.1"
   }
 }

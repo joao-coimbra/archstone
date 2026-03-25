@@ -2,9 +2,9 @@
 export {
   type DomainEvent,
   DomainEvents,
-} from "@/core/index.ts"
+} from "@/core/index"
 
-export * from "./entities/index.ts"
+export * from "./entities/index"
 
 /**
  * @deprecated use `EventHandler` from `archstone/core` instead.

@@ -1,4 +1,4 @@
-import type { DomainEvent } from "./domain-event.ts"
+import type { DomainEvent } from "./domain-event"
 
 /**
  * Base contract for all domain event handlers.

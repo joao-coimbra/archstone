@@ -1,3 +1,3 @@
-export type { DomainEvent } from "./domain-event.ts"
-export { DomainEvents } from "./domain-events.ts"
-export type { EventHandler } from "./event-handler.ts"
+export type { DomainEvent } from "./domain-event"
+export { DomainEvents } from "./domain-events"
+export type { EventHandler } from "./event-handler"
