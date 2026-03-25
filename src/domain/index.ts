@@ -1,2 +1,2 @@
-export * from "./application/index.ts"
-export * from "./enterprise/index.ts"
+export * from "./application/index"
+export * from "./enterprise/index"

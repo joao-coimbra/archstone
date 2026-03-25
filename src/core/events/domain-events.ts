@@ -1,6 +1,6 @@
-import type { UniqueEntityId } from "@/core/index.ts"
-import type { AggregateRoot } from "@/domain/index.ts"
-import type { DomainEvent } from "./domain-event.ts"
+import type { UniqueEntityId } from "@/core/index"
+import type { AggregateRoot } from "@/domain/index"
+import type { DomainEvent } from "./domain-event"
 
 /**
  * Callback function invoked when a domain event is dispatched.

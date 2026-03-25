@@ -1,5 +1,5 @@
-import { type DomainEvent, DomainEvents } from "@/core/index.ts"
-import { Entity } from "./entity.ts"
+import { type DomainEvent, DomainEvents } from "@/core/index"
+import { Entity } from "./entity"
 
 /**
  * Base class for all aggregate roots in the domain.

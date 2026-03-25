@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { WatchedList } from "./watched-list.ts"
+import { WatchedList } from "./watched-list"
 
 class NumberWatchedList extends WatchedList<number> {
   compareItems(a: number, b: number): boolean {

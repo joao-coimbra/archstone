@@ -1,6 +1,14 @@
-export { type Either, left, right } from "./either.ts"
-export * from "./events/index.ts"
-export * from "./types/index.ts"
-export { UniqueEntityId } from "./unique-entity-id.ts"
-export { ValueObject } from "./value-object.ts"
-export { WatchedList } from "./watched-list.ts"
+export {
+  type Either,
+  just,
+  left,
+  type Maybe,
+  maybe,
+  nothing,
+  right,
+} from "failcraft"
+export * from "./events/index"
+export * from "./types/index"
+export { UniqueEntityId } from "./unique-entity-id"
+export { ValueObject } from "./value-object"
+export { WatchedList } from "./watched-list"
