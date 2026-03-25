@@ -1,11 +1,15 @@
-import type { Either } from "@/core/index"
+import type { Either, Maybe } from "@/core/index"
 import type { UseCaseError } from "./use-case.error"
 
 /**
  * Represents the expected output shape of any use case.
- * Always an {@link Either} — left for errors, right for success.
+ *
+ * Three valid shapes:
+ * - `Either<Error, T>`: returns a concrete value or fails with an error
+ * - `Maybe<T>`: returns an optional value when the error path is irrelevant
+ * - `Nothing`: void result; covered since `Nothing extends Maybe<never>`
  */
-type UseCaseOutput = Either<UseCaseError | never, unknown | null>
+type UseCaseOutput = Either<UseCaseError | never, unknown> | Maybe<unknown>
 
 /**
  * Base contract for all application use cases.
