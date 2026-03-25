@@ -8,6 +8,8 @@
 
 Build on Domain-Driven Design and Clean Architecture — without writing the same boilerplate on every project.
 
+[![failcraft](https://img.shields.io/badge/powered%20by-failcraft-F97316?style=for-the-badge)](https://github.com/joao-coimbra/failcraft)
+
 <br />
 
 [![npm version](https://img.shields.io/npm/v/archstone?style=for-the-badge&logo=npm&color=CB3837&logoColor=white)](https://www.npmjs.com/package/archstone)
@@ -27,7 +29,7 @@ Build on Domain-Driven Design and Clean Architecture — without writing the sam
 
 ## Why Archstone?
 
-Every backend project in DDD needs the same structural pieces — and most teams rewrite them from scratch each time. Archstone gives you a **battle-tested, zero-dependency set of base classes and contracts** so you can skip the boilerplate and go straight to modeling your domain.
+Every backend project in DDD needs the same structural pieces — and most teams rewrite them from scratch each time. Archstone gives you a **battle-tested, minimal set of base classes and contracts** so you can skip the boilerplate and go straight to modeling your domain.
 
 ```ts
 // ❌ Before — scattered, inconsistent, no error contract
@@ -46,6 +48,7 @@ async function createUser(): Promise<Either<NotFoundError, User>> { ... }
 | | |
 |---|---|
 | **`Either`** | Functional error handling — use cases never throw |
+| **`Maybe`** | Nullable value handling without null checks — `just`, `nothing`, `maybe` |
 | **`Entity` / `AggregateRoot`** | Identity-based domain objects with built-in event support |
 | **`ValueObject`** | Equality by value, not reference |
 | **`UniqueEntityId`** | UUID v7 identity, consistent across your entire domain |
@@ -64,7 +67,7 @@ bun add archstone
 npm install archstone
 ```
 
-> Zero runtime dependencies. Pure TypeScript.
+> Minimal dependencies — only [failcraft](https://github.com/joao-coimbra/failcraft) for `Either` and `Maybe`. Pure TypeScript.
 
 ---
 
@@ -91,6 +94,29 @@ if (result.isLeft()) {
   console.error(result.value) // UserNotFoundError
 } else {
   console.log(result.value)   // User ✓
+}
+```
+
+---
+
+### `Maybe` — nullable values without null checks
+
+```ts
+import { Maybe, just, nothing, maybe } from 'archstone/core'
+
+type FindUserResult = Maybe<User>
+
+async function findUser(id: string): Promise<FindUserResult> {
+  const user = await repo.findById(id)
+  return maybe(user) // wraps null/undefined as nothing(), anything else as just()
+}
+
+const result = await findUser('123')
+
+if (result.isNothing()) {
+  console.log('not found')
+} else {
+  console.log(result.value) // User ✓
 }
 ```
 
@@ -224,7 +250,7 @@ export interface AuditRepository extends Creatable<AuditLog> {}
 | Import | Contents |
 |---|---|
 | `archstone` | Everything |
-| `archstone/core` | `Either`, `ValueObject`, `UniqueEntityId`, `WatchedList`, `Optional`, `DomainEvent`, `DomainEvents`, `EventHandler` |
+| `archstone/core` | `Either`, `Maybe`, `left`, `right`, `just`, `nothing`, `maybe`, `ValueObject`, `UniqueEntityId`, `WatchedList`, `Optional`, `DomainEvent`, `DomainEvents`, `EventHandler` |
 | `archstone/domain` | All domain exports |
 | `archstone/domain/enterprise` | `Entity`, `AggregateRoot` |
 | `archstone/domain/application` | `UseCase`, `UseCaseError`, repository contracts |
@@ -238,7 +264,6 @@ All sub-paths share type declarations via a common chunk — mixing imports from
 ```
 src/
 ├── core/                    # Zero domain knowledge — pure language utilities
-│   ├── either.ts            # Left / Right functional result type
 │   ├── value-object.ts      # Value equality base class
 │   ├── unique-entity-id.ts  # UUID v7 identity wrapper
 │   ├── watched-list.ts      # Change-tracked collection
@@ -278,7 +303,7 @@ src/
 | **Test Framework** | `bun:test` (built-in) |
 | **Build Tool** | [bunup](https://github.com/nicepkg/bunup) |
 | **Linter / Formatter** | [Biome](https://biomejs.dev) via [Ultracite](https://ultracite.dev) |
-| **Dependencies** | None (zero runtime dependencies) |
+| **Dependencies** | [failcraft](https://github.com/joao-coimbra/failcraft) — `Either` and `Maybe` types |
 
 ---
 
