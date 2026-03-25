@@ -1,3 +1,4 @@
+import type { Nothing } from "failcraft"
 import type { Either } from "@/core/index"
 import type { UseCaseError } from "./use-case.error"
 
@@ -5,7 +6,7 @@ import type { UseCaseError } from "./use-case.error"
  * Represents the expected output shape of any use case.
  * Always an {@link Either} — left for errors, right for success.
  */
-type UseCaseOutput = Either<UseCaseError | never, unknown | null>
+type UseCaseOutput = Either<UseCaseError | never, unknown | Nothing>
 
 /**
  * Base contract for all application use cases.
