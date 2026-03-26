@@ -94,11 +94,11 @@ Use in-memory repository implementations for use case tests — never couple tes
 
 - Always merge pull requests using **Squash and Merge** (`--squash`)
 - Never `--delete-branch` — the repo auto-deletes merged branches
-- Always sync master after merge
+- Always sync main after merge
 
 ```bash
 gh pr merge <number> --squash
-git checkout master && git pull
+git checkout main && git pull
 ```
 
 ### Branch Full Flow
@@ -109,7 +109,7 @@ git checkout -b <type>/<name>
 git push -u origin <type>/<name>
 gh pr create --title "<title>" --body "<body>"
 gh pr merge <number> --squash
-git checkout master && git pull
+git checkout main && git pull
 ```
 
 ## Release Procedure
@@ -169,7 +169,7 @@ git push -u origin release/v<x.y.z>
 gh pr create --title "chore: release v<x.y.z>" --body "..."
 gh pr merge <number> --squash --auto     # auto-merges after CI passes
 # wait for merge confirmation, then:
-git checkout master && git pull
+git checkout main && git pull
 
 git push origin v<x.y.z>
 ```
