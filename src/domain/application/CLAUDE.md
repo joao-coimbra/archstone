@@ -20,8 +20,8 @@ class GetUserUseCase implements UseCase<GetUserInput, GetUserOutput> {
 
   async execute({ userId }: GetUserInput): Promise<GetUserOutput> {
     const user = await this.users.findById(userId)
-    if (!user) return left(new UserNotFoundError(userId))
-    return right(user)
+    if (user.isNothing()) return left(new UserNotFoundError(userId))
+    return right(user.value)
   }
 }
 ```
@@ -54,7 +54,7 @@ Use the pre-built segregated contracts and compose as needed:
 
 | Contract | Method signature |
 |----------|-----------------|
-| `Findable<T>` | `findById(id: string): Promise<T \| null>` |
+| `Findable<T>` | `findById(id: string): Promise<Maybe<T>>` |
 | `Creatable<T>` | `create(entity: T): Promise<void>` |
 | `Saveable<T>` | `save(entity: T): Promise<void>` |
 | `Deletable<T>` | `delete(entity: T): Promise<void>` |
@@ -69,6 +69,7 @@ interface UserRepository extends Repository<User> {
 ```
 
 **Gotcha:** `Findable.findById()` takes a plain `string` — pass `entity.id.toValue()`, not the `UniqueEntityId` object.
+**Gotcha:** `Findable.findById()` returns `Promise<Maybe<T>>` — check with `.isNothing()` and access the value via `.value`, never with `!result`.
 **Gotcha:** `Deletable.delete()` takes the **full entity**, not an id.
 
 ## Injecting Repository into Use Cases

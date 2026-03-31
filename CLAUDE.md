@@ -117,7 +117,7 @@ git checkout main && git pull
 - Never `git push --tags` — pushes all local tags including unintended ones
 - Never create git tags for RC versions — tag only stable releases
 - Always use annotated tags (`-a`) — the Release GA reads the message as the GitHub Release body
-- GA does **not** publish to npm — publish locally first, then tag
+- Pushing a stable tag triggers two GAs automatically: `release.yml` creates the GitHub Release and `publish.yml` publishes to npm — no local publish step needed
 - Working tree must be clean before `bun pm version`
 
 ### Stable Release
@@ -162,8 +162,6 @@ Changes:
 - change 1
 - change 2"
 
-bun run release                          # publishes to npm with dist-tag latest
-
 git checkout -b release/v<x.y.z>
 git push -u origin release/v<x.y.z>
 gh pr create --title "chore: release v<x.y.z>" --body "..."
@@ -171,10 +169,13 @@ gh pr merge <number> --squash --auto     # auto-merges after CI passes
 # wait for merge confirmation, then:
 git checkout main && git pull
 
+# pushing the tag triggers publish.yml (npm) and release.yml (GitHub Release)
 git push origin v<x.y.z>
 ```
 
 ### RC / Pre-release
+
+RC versions are published locally — `publish.yml` only runs on stable `v*.*.*` tags, and no git tag is created for RCs.
 
 ```bash
 bun pm version prerelease --preid rc

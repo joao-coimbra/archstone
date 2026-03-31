@@ -55,7 +55,7 @@ Wraps UUID v7 (time-sortable). Auto-generates if no value is provided.
 - `equals(id)` → identity comparison
 
 **Gotcha:** `DomainEvents.dispatchEventsForAggregate()` takes a `UniqueEntityId` — never pass `.toValue()` there.
-**Gotcha:** `Findable.findById()` takes a `string` — pass `id.toValue()`, not the object.
+**Gotcha:** `Findable.findById()` takes a `string` — pass `id.toValue()`, not the object. It returns `Promise<Maybe<T>>` — check with `.isNothing()` and unwrap with `.value`.
 
 ## WatchedList
 
