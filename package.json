@@ -59,7 +59,7 @@
   "description": "TypeScript architecture foundation for backend services based on Domain-Driven Design and Clean Architecture",
   "files": [
     "dist",
-    "skills"
+    "README.md"
   ],
   "homepage": "https://github.com/joao-coimbra/archstone#readme",
   "keywords": [
