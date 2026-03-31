@@ -1,6 +1,6 @@
 {
   "name": "archstone",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "author": {
     "name": "João Henrique Benatti Coimbra",
     "url": "https://github.com/joao-coimbra"
@@ -59,7 +59,7 @@
   "description": "TypeScript architecture foundation for backend services based on Domain-Driven Design and Clean Architecture",
   "files": [
     "dist",
-    "skills"
+    "README.md"
   ],
   "homepage": "https://github.com/joao-coimbra/archstone#readme",
   "keywords": [
