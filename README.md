@@ -286,9 +286,9 @@ src/
         │   └── use-case.error.ts
         └── repositories/
             ├── repository.ts
-            ├── findabe.ts
+            ├── findable.ts
             ├── creatable.ts
-            ├── saveble.ts
+            ├── saveable.ts
             └── deletable.ts
 ```
 

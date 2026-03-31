@@ -1,7 +1,7 @@
 import type { Creatable } from "./creatable"
 import type { Deletable } from "./deletable"
-import type { Findable } from "./findabe"
-import type { Saveable } from "./saveble"
+import type { Findable } from "./findable"
+import type { Saveable } from "./saveable"
 
 /**
  * Full CRUD repository contract, composing all segregated interfaces.
