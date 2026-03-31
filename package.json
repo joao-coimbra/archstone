@@ -88,6 +88,10 @@
     "prepublishOnly": "bun run build",
     "prepare": "bunx husky"
   },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
   "type": "module",
   "types": "./dist/index.d.ts",
   "dependencies": {
