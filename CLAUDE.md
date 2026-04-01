@@ -114,6 +114,7 @@ git checkout main && git pull
 
 ## Release Procedure
 
+- Stable tags are created automatically by `auto-tag.yml` when `package.json` changes on `main` — do NOT push tags manually after a release PR merges
 - Never `git push --tags` — pushes all local tags including unintended ones
 - Never create git tags for RC versions — tag only stable releases
 - Always use annotated tags (`-a`) — the Release GA reads the message as the GitHub Release body
@@ -169,8 +170,9 @@ gh pr merge <number> --squash --auto     # auto-merges after CI passes
 # wait for merge confirmation, then:
 git checkout main && git pull
 
-# pushing the tag triggers publish.yml (npm) and release.yml (GitHub Release)
-git push origin v<x.y.z>
+# auto-tag.yml pushes the tag automatically after merge — no manual git push origin v<x.y.z> needed
+# The tag message will be AI-generated (Claude Haiku) from the commit log
+# To override with a custom message: delete the auto-created tag, recreate manually, and force-push
 ```
 
 ### RC / Pre-release
