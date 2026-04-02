@@ -13,6 +13,26 @@ The library is published to npm as `archstone` and exposes four entry points:
 | `archstone/domain/enterprise` | domain model primitives |
 | `archstone/domain/application` | orchestration contracts |
 
+### Claude Review Workflow
+
+`claude-review.yml` has 3 jobs: `wait-for-ci` (polls CI up to 10 min), `notify-failure` (posts PR comment on CI failure/timeout), `review` (runs Claude after CI passes).
+- Do NOT change the trigger to `workflow_run` — `track_progress` breaks in that mode (`AutomationContext` has no `entityNumber`)
+- Test the pre-commit hook with `sh .husky/pre-commit`, not `bun x husky`
+
+### Multiple PRs in One Session
+
+When creating several PRs at once, stack them so each branch starts from the previous one — not all from `main`. This avoids the "branch not up to date" cycle on sequential merges.
+
+```bash
+git checkout -b pr-1 && git add <files> && git commit && git push
+gh pr create --head pr-1 --base main
+
+git checkout -b pr-2 && git add <files> && git commit && git push
+gh pr create --head pr-2 --base pr-1
+```
+
+Only stack when PRs are sequential and independent. If they touch the same files, resolve that before splitting.
+
 ## Logical Architecture
 
 Three layers, each with a strict dependency rule — inner layers never import outer ones:
