@@ -6,16 +6,16 @@ Nothing in this layer may import from `domain/`. If a new utility needs domain c
 
 ## What Lives Here
 
-| Export | Purpose |
-|--------|---------|
-| `Either<L, R>` | Discriminated union for type-safe error handling — replaces exceptions |
-| `ValueObject<Props>` | Base class for immutable objects defined by their attributes |
-| `UniqueEntityId` | UUID v7 wrapper used as the identity type for all entities |
-| `WatchedList<T>` | Abstract collection that tracks additions and removals for efficient persistence |
-| `DomainEvent` | Marker interface every domain event must implement |
-| `DomainEvents` | Central registry and dispatcher — singleton |
-| `EventHandler<T>` | Generic interface for side-effect handlers |
-| `Optional<T, K>` | Utility type to make specific props optional |
+| Export               | Purpose                                                                          |
+| -------------------- | -------------------------------------------------------------------------------- |
+| `Either<L, R>`       | Discriminated union for type-safe error handling — replaces exceptions           |
+| `ValueObject<Props>` | Base class for immutable objects defined by their attributes                     |
+| `UniqueEntityId`     | UUID v7 wrapper used as the identity type for all entities                       |
+| `WatchedList<T>`     | Abstract collection that tracks additions and removals for efficient persistence |
+| `DomainEvent`        | Marker interface every domain event must implement                               |
+| `DomainEvents`       | Central registry and dispatcher — singleton                                      |
+| `EventHandler<T>`    | Generic interface for side-effect handlers                                       |
+| `Optional<T, K>`     | Utility type to make specific props optional                                     |
 
 ## Either
 
@@ -38,7 +38,9 @@ Equality is determined by deep property comparison, not reference. Extend and ca
 
 ```ts
 class Email extends ValueObject<{ value: string }> {
-  get value() { return this.props.value }
+  get value() {
+    return this.props.value
+  }
 
   static create(value: string): Email {
     // validate here, return Either if needed

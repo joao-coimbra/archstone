@@ -6,16 +6,17 @@ Archstone is a **zero-dependency TypeScript library** that provides the architec
 
 The library is published to npm as `archstone` and exposes four entry points:
 
-| Entry point | Layer |
-|-------------|-------|
-| `archstone` | re-exports everything |
-| `archstone/core` | pure language utilities |
-| `archstone/domain/enterprise` | domain model primitives |
+| Entry point                    | Layer                   |
+| ------------------------------ | ----------------------- |
+| `archstone`                    | re-exports everything   |
+| `archstone/core`               | pure language utilities |
+| `archstone/domain/enterprise`  | domain model primitives |
 | `archstone/domain/application` | orchestration contracts |
 
 ### Claude Review Workflow
 
 `claude-review.yml` has 3 jobs: `wait-for-ci` (polls CI up to 10 min), `notify-failure` (posts PR comment on CI failure/timeout), `review` (runs Claude after CI passes).
+
 - Do NOT change the trigger to `workflow_run` — `track_progress` breaks in that mode (`AutomationContext` has no `entityNumber`)
 - Test the pre-commit hook with `sh .husky/pre-commit`, not `bun x husky`
 
@@ -67,14 +68,14 @@ src/
 
 Use **Bun** exclusively — never Node.js, npm, yarn, or pnpm.
 
-| Task | Command |
-|------|---------|
-| Install dependencies | `bun install` |
-| Run tests | `bun test` |
-| Build | `bun run build` |
-| Lint & format | `bun x ultracite fix` |
-| Publish | `bun run release` |
-| Bump version | `bun pm version patch\|minor\|major` |
+| Task                 | Command                              |
+| -------------------- | ------------------------------------ |
+| Install dependencies | `bun install`                        |
+| Run tests            | `bun test`                           |
+| Build                | `bun run build`                      |
+| Lint & format        | `bun x ultracite fix`                |
+| Publish              | `bun run release`                    |
+| Bump version         | `bun pm version patch\|minor\|major` |
 
 ## Path Aliases & Import Rules
 
@@ -207,10 +208,10 @@ bun run release --tag next
 
 ### dist-tags
 
-| Tag | Use |
-|-----|-----|
-| `latest` | stable releases |
-| `next` | RC / pre-release |
+| Tag      | Use              |
+| -------- | ---------------- |
+| `latest` | stable releases  |
+| `next`   | RC / pre-release |
 
 ## Agent Skills for Consumer Projects
 

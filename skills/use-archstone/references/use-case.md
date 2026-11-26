@@ -11,18 +11,18 @@
 ## Example
 
 ```ts
-import type { UseCase, UseCaseError } from 'archstone/domain/application'
-import { Either, left, right } from 'archstone/core'
+import type { UseCase, UseCaseError } from "archstone/domain/application"
+import { Either, left, right } from "archstone/core"
 
 class UserNotFoundError implements UseCaseError {
-  message = 'User not found.'
+  message = "User not found."
 }
 
 class InvalidEmailError implements UseCaseError {
-  message = 'Invalid email address.'
+  message = "Invalid email address."
 }
 
-type Input  = { userId: string; newEmail: string }
+type Input = { userId: string; newEmail: string }
 type Output = Either<UserNotFoundError | InvalidEmailError, User>
 
 class UpdateUserEmailUseCase implements UseCase<Input, Output> {

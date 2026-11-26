@@ -12,8 +12,8 @@
 ## Entity Example
 
 ```ts
-import { Entity } from 'archstone/domain/enterprise'
-import { UniqueEntityId, type Optional } from 'archstone/core'
+import { Entity } from "archstone/domain/enterprise"
+import { UniqueEntityId, type Optional } from "archstone/core"
 
 interface ProductProps {
   name: string
@@ -22,13 +22,20 @@ interface ProductProps {
 }
 
 class Product extends Entity<ProductProps> {
-  get name()  { return this.props.name }
-  get price() { return this.props.price }
+  get name() {
+    return this.props.name
+  }
+  get price() {
+    return this.props.price
+  }
 
-  static create(props: Optional<ProductProps, 'createdAt'>, id?: UniqueEntityId): Product {
+  static create(
+    props: Optional<ProductProps, "createdAt">,
+    id?: UniqueEntityId
+  ): Product {
     return new Product(
       { ...props, createdAt: props.createdAt ?? new Date() },
-      id ?? new UniqueEntityId(),
+      id ?? new UniqueEntityId()
     )
   }
 }
@@ -37,8 +44,8 @@ class Product extends Entity<ProductProps> {
 ## AggregateRoot Example
 
 ```ts
-import { AggregateRoot } from 'archstone/domain/enterprise'
-import { UniqueEntityId, type Optional } from 'archstone/core'
+import { AggregateRoot } from "archstone/domain/enterprise"
+import { UniqueEntityId, type Optional } from "archstone/core"
 
 interface OrderProps {
   customerId: UniqueEntityId
@@ -47,13 +54,20 @@ interface OrderProps {
 }
 
 class Order extends AggregateRoot<OrderProps> {
-  get customerId() { return this.props.customerId }
-  get total()      { return this.props.total }
+  get customerId() {
+    return this.props.customerId
+  }
+  get total() {
+    return this.props.total
+  }
 
-  static create(props: Optional<OrderProps, 'createdAt'>, id?: UniqueEntityId): Order {
+  static create(
+    props: Optional<OrderProps, "createdAt">,
+    id?: UniqueEntityId
+  ): Order {
     const order = new Order(
       { ...props, createdAt: props.createdAt ?? new Date() },
-      id ?? new UniqueEntityId(),
+      id ?? new UniqueEntityId()
     )
     order.addDomainEvent(new OrderCreatedEvent(order))
     return order

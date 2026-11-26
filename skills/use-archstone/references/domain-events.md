@@ -14,10 +14,13 @@
 
 ```ts
 class User extends AggregateRoot<UserProps> {
-  static create(props: Optional<UserProps, 'createdAt'>, id?: UniqueEntityId): User {
+  static create(
+    props: Optional<UserProps, "createdAt">,
+    id?: UniqueEntityId
+  ): User {
     const user = new User(
       { ...props, createdAt: props.createdAt ?? new Date() },
-      id ?? new UniqueEntityId(),
+      id ?? new UniqueEntityId()
     )
     user.addDomainEvent(new UserCreatedEvent(user))
     return user
@@ -28,8 +31,8 @@ class User extends AggregateRoot<UserProps> {
 ## Defining a Handler
 
 ```ts
-import type { EventHandler } from 'archstone/core'
-import { DomainEvents } from 'archstone/core'
+import type { EventHandler } from "archstone/core"
+import { DomainEvents } from "archstone/core"
 
 class OnUserCreated implements EventHandler<UserCreatedEvent> {
   constructor(private readonly mailer: Mailer) {
@@ -37,10 +40,7 @@ class OnUserCreated implements EventHandler<UserCreatedEvent> {
   }
 
   setupSubscriptions(): void {
-    DomainEvents.register(
-      this.handle.bind(this),
-      UserCreatedEvent.name,
-    )
+    DomainEvents.register(this.handle.bind(this), UserCreatedEvent.name)
   }
 
   async handle(event: UserCreatedEvent): Promise<void> {

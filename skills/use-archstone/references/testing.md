@@ -9,9 +9,9 @@
 ## Use Case Test Example
 
 ```ts
-import { test, expect, beforeEach } from 'bun:test'
-import { GetUserUseCase } from './get-user'
-import { InMemoryUserRepository } from '@/test/repositories/in-memory-user-repository'
+import { test, expect, beforeEach } from "bun:test"
+import { GetUserUseCase } from "./get-user"
+import { InMemoryUserRepository } from "@/test/repositories/in-memory-user-repository"
 
 let repo: InMemoryUserRepository
 let useCase: GetUserUseCase
@@ -21,8 +21,8 @@ beforeEach(() => {
   useCase = new GetUserUseCase(repo)
 })
 
-test('returns user when found', async () => {
-  const user = User.create({ name: 'João' })
+test("returns user when found", async () => {
+  const user = User.create({ name: "João" })
   await repo.create(user)
 
   const result = await useCase.execute({ userId: user.id.toValue() })
@@ -31,8 +31,8 @@ test('returns user when found', async () => {
   expect(result.value).toEqual(user)
 })
 
-test('returns error when user not found', async () => {
-  const result = await useCase.execute({ userId: 'non-existent' })
+test("returns error when user not found", async () => {
+  const result = await useCase.execute({ userId: "non-existent" })
 
   expect(result.isLeft()).toBe(true)
 })
@@ -41,7 +41,7 @@ test('returns error when user not found', async () => {
 ## Domain Event Isolation
 
 ```ts
-import { DomainEvents } from 'archstone/domain/enterprise'
+import { DomainEvents } from "archstone/domain/enterprise"
 
 beforeEach(() => {
   DomainEvents.clearHandlers()

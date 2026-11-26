@@ -15,7 +15,7 @@
 ## Contract Example
 
 ```ts
-import type { Repository, Creatable } from 'archstone/domain/application'
+import type { Repository, Creatable } from "archstone/domain/application"
 
 // Full CRUD + custom method
 export interface UserRepository extends Repository<User> {
@@ -33,22 +33,24 @@ export class InMemoryUserRepository implements UserRepository {
   public items: User[] = []
 
   async findById(id: string) {
-    return this.items.find(u => u.id.toValue() === id) ?? null
+    return this.items.find((u) => u.id.toValue() === id) ?? null
   }
 
   async findByEmail(email: string) {
-    return this.items.find(u => u.email.value === email) ?? null
+    return this.items.find((u) => u.email.value === email) ?? null
   }
 
-  async create(user: User)  { this.items.push(user) }
+  async create(user: User) {
+    this.items.push(user)
+  }
 
   async save(user: User) {
-    const i = this.items.findIndex(u => u.id.equals(user.id))
+    const i = this.items.findIndex((u) => u.id.equals(user.id))
     if (i >= 0) this.items[i] = user
   }
 
   async delete(user: User) {
-    this.items = this.items.filter(u => !u.id.equals(user.id))
+    this.items = this.items.filter((u) => !u.id.equals(user.id))
   }
 }
 ```

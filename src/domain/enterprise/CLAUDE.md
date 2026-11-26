@@ -21,14 +21,18 @@ interface UserProps {
 }
 
 class User extends Entity<UserProps> {
-  get name() { return this.props.name }
-  get email() { return this.props.email }
+  get name() {
+    return this.props.name
+  }
+  get email() {
+    return this.props.email
+  }
 
-  static create(props: Optional<UserProps, "createdAt">, id?: UniqueEntityId): User {
-    return new User(
-      { ...props, createdAt: props.createdAt ?? new Date() },
-      id
-    )
+  static create(
+    props: Optional<UserProps, "createdAt">,
+    id?: UniqueEntityId
+  ): User {
+    return new User({ ...props, createdAt: props.createdAt ?? new Date() }, id)
   }
 }
 ```
@@ -43,12 +47,17 @@ Raise events inside the aggregate with `addDomainEvent()`. Dispatch happens in i
 class UserCreatedEvent implements DomainEvent {
   occurredAt = new Date()
   constructor(public readonly user: User) {}
-  getAggregateId() { return this.user.id }
+  getAggregateId() {
+    return this.user.id
+  }
 }
 
 class User extends AggregateRoot<UserProps> {
   static create(props: Optional<UserProps, "createdAt">): User {
-    const user = new User({ ...props, createdAt: props.createdAt ?? new Date() })
+    const user = new User({
+      ...props,
+      createdAt: props.createdAt ?? new Date(),
+    })
     user.addDomainEvent(new UserCreatedEvent(user))
     return user
   }
@@ -63,7 +72,9 @@ Objects without identity — defined entirely by their attributes. Immutable by 
 
 ```ts
 class Email extends ValueObject<{ value: string }> {
-  get value() { return this.props.value }
+  get value() {
+    return this.props.value
+  }
 
   static create(raw: string): Email {
     if (!raw.includes("@")) throw new Error("invalid email")

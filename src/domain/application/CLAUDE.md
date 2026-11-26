@@ -52,13 +52,13 @@ Define repositories as interfaces only. Implementations live in infrastructure, 
 
 Use the pre-built segregated contracts and compose as needed:
 
-| Contract | Method signature |
-|----------|-----------------|
-| `Findable<T>` | `findById(id: string): Promise<Maybe<T>>` |
-| `Creatable<T>` | `create(entity: T): Promise<void>` |
-| `Saveable<T>` | `save(entity: T): Promise<void>` |
-| `Deletable<T>` | `delete(entity: T): Promise<void>` |
-| `Repository<T>` | all four above |
+| Contract        | Method signature                          |
+| --------------- | ----------------------------------------- |
+| `Findable<T>`   | `findById(id: string): Promise<Maybe<T>>` |
+| `Creatable<T>`  | `create(entity: T): Promise<void>`        |
+| `Saveable<T>`   | `save(entity: T): Promise<void>`          |
+| `Deletable<T>`  | `delete(entity: T): Promise<void>`        |
+| `Repository<T>` | all four above                            |
 
 ```ts
 import { Repository } from "@/domain/application/index.ts"

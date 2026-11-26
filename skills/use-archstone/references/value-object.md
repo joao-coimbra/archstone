@@ -10,26 +10,30 @@
 ## Example
 
 ```ts
-import { ValueObject } from 'archstone/core'
+import { ValueObject } from "archstone/core"
 
-interface EmailProps { value: string }
+interface EmailProps {
+  value: string
+}
 
 class Email extends ValueObject<EmailProps> {
-  get value() { return this.props.value }
+  get value() {
+    return this.props.value
+  }
 
   static create(raw: string): Email {
-    if (!raw.includes('@')) throw new Error('Invalid email address')
+    if (!raw.includes("@")) throw new Error("Invalid email address")
     return new Email({ value: raw.toLowerCase().trim() })
   }
 
   withDomain(domain: string): Email {
-    const [local] = this.props.value.split('@')
+    const [local] = this.props.value.split("@")
     return new Email({ value: `${local}@${domain}` })
   }
 }
 
-const a = Email.create('user@example.com')
-const b = Email.create('user@example.com')
+const a = Email.create("user@example.com")
+const b = Email.create("user@example.com")
 a.equals(b) // true
 ```
 
@@ -50,7 +54,8 @@ try {
 
 ```ts
 // ❌ comparing with ===
-if (user.email === other.email) {} // use .equals()
+if (user.email === other.email) {
+} // use .equals()
 
 // ❌ mutating props
 this.props.value = newValue // return new Email({ value: newValue })
