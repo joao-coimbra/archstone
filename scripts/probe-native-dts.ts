@@ -10,12 +10,15 @@
  *
  * Known blockers as of Bun 1.4.5 / 1.4.6-canary:
  * - Stable has no `--dts` (JS only).
- * - Canary `--dts` is still experimental for 1.5.
- * - Canary CLI emits `@/` path aliases inside `.d.ts`; `rewriteDtsAliases`
+ * - Canary `--dts` is still experimental for 1.5; this probe refuses any Bun
+ *   version that is not the npm `latest` dist-tag (blocks canary cutover).
+ * - Canary's typechecker rejects `compilerOptions.baseUrl` (TS5102); keep
+ *   only `paths` for `@/*`.
+ * - Canary CLI may emit `@/` path aliases inside `.d.ts`; `rewriteDtsAliases`
  *   converts them to relative imports (same job bunup does today).
  *
- * When this exits 0: point `build`/`dev` at the native script, remove bunup
- * + bunup.config.ts (and any temporary dual scripts), re-pin Bun, open a PR.
+ * When this exits 0: run `bun run cutover:native-dts` (or point `build`/`dev`
+ * at the native script and remove bunup + bunup.config.ts), re-pin Bun, PR.
  *
  * Usage: bun scripts/probe-native-dts.ts
  */
@@ -58,6 +61,47 @@ function record(id: string, ok: boolean, detail: string): void {
 async function helpMentionsDts(): Promise<boolean> {
   const result = await $`bun build --help`.quiet().nothrow()
   return result.stdout.toString().includes("--dts")
+}
+
+async function npmLatestBunVersion(): Promise<string | null> {
+  try {
+    const response = await fetch("https://registry.npmjs.org/bun/latest")
+    if (!response.ok) {
+      return null
+    }
+    const body = (await response.json()) as { version?: string }
+    return body.version ?? null
+  } catch {
+    return null
+  }
+}
+
+async function recordStableCliDtsGate(): Promise<void> {
+  const helpHasDts = await helpMentionsDts()
+  const npmLatest = await npmLatestBunVersion()
+  const isNpmLatest = npmLatest !== null && Bun.version === npmLatest
+
+  if (!(helpHasDts && isNpmLatest)) {
+    const reasons: string[] = []
+    if (!helpHasDts) {
+      reasons.push("`bun build --help` does not list --dts")
+    }
+    if (npmLatest === null) {
+      reasons.push("could not resolve npm bun@latest")
+    } else if (!isNpmLatest) {
+      reasons.push(
+        `Bun ${Bun.version} is not npm latest stable (${npmLatest}) — canary/prerelease blocked`
+      )
+    }
+    record("stable-cli-dts", false, reasons.join("; "))
+    return
+  }
+
+  record(
+    "stable-cli-dts",
+    true,
+    `Bun ${Bun.version} matches npm latest and lists --dts`
+  )
 }
 
 async function collectDtsFiles(root: string): Promise<string[]> {
@@ -201,14 +245,7 @@ void ok
 async function main(): Promise<number> {
   console.log(`probe-native-dts — Bun ${Bun.version}\n`)
 
-  const helpHasDts = await helpMentionsDts()
-  record(
-    "stable-cli-dts",
-    helpHasDts,
-    helpHasDts
-      ? "`bun build --help` lists --dts"
-      : "`bun build --help` does not list --dts (still missing or experimental-only)"
-  )
+  await recordStableCliDtsGate()
 
   const outdir = await mkdtemp(join(tmpdir(), "archstone-native-dts-"))
   try {
