@@ -5,13 +5,11 @@
  * Safe to run anytime: exits non-zero unless `probe:native-dts` passes first.
  * When it succeeds it:
  * - points `build` / `dev` at `scripts/build-native.ts`
- * - removes temporary `build:native` script
- * - removes the `bunup` dependency
- * - deletes `bunup.config.ts`
+ * - removes temporary `build:native` + one-shot `cutover:native-dts` scripts
+ * - removes the `bunup` dependency and deletes `bunup.config.ts` + this file
  * - pins `packageManager`, `@types/bun`, `engines.bun`, and CI `bun-version`
- *   to the Bun version that unlocked native dts
- * - refreshes the lockfile
- * - runs `bun test` and `bun run build`
+ * - rewrites CLAUDE.md / README.md so bunup is not left documented
+ * - refreshes the lockfile, then runs `bun test` and `bun run build`
  *
  * Usage: bun scripts/cutover-native-dts.ts
  */
@@ -54,6 +52,43 @@ async function pinWorkflowBunVersion(version: string): Promise<number> {
   return updated
 }
 
+async function rewritePostCutoverDocs(version: string): Promise<void> {
+  const claudePath = "CLAUDE.md"
+  const claude = await readFile(claudePath, "utf8")
+  const nextClaude = claude
+    .replace(
+      /Use \*\*Bun [\d.]+(?:\+)?\*\* exclusively[^\n]*/,
+      `Use **Bun ${version}** exclusively — never Node.js, npm, yarn, or pnpm. The repo pins \`packageManager\` to \`bun@${version}\`.`
+    )
+    .replace(
+      /Library builds still use \*\*bunup\*\*[^\n]*\n\n/,
+      "Library builds use native `bun build --dts` via `scripts/build-native.ts` (with `rewrite-dts-aliases` for `@/` → relative imports).\n\n"
+    )
+    .replace(/\| Native build \(gated\) \| `bun run build:native` \|\n/, "")
+    .replace(
+      /\| Native dts readiness \| `bun run probe:native-dts` \|\n/,
+      "| Native dts regression probe | `bun run probe:native-dts` |\n"
+    )
+  await writeFile(claudePath, nextClaude)
+
+  const readmePath = "README.md"
+  const readme = await readFile(readmePath, "utf8")
+  const nextReadme = readme
+    .replace(
+      /\| \*\*Runtime \/ Package Manager\*\* \| \[Bun\]\(https:\/\/bun\.sh\) [^\n]+/,
+      `| **Runtime / Package Manager** | [Bun](https://bun.sh) ${version} (required) |`
+    )
+    .replace(
+      /\| \*\*Build Tool\*\* \| \[bunup\]\([^)]+\) \|/,
+      "| **Build Tool** | Native `bun build --dts` |"
+    )
+    .replace(
+      /Requirements: \*\*Bun >= [^\n]+/,
+      `Requirements: **Bun >= ${version}**`
+    )
+  await writeFile(readmePath, nextReadme)
+}
+
 async function main(): Promise<void> {
   console.log("Running probe:native-dts…")
   const probe = await $`bun run probe:native-dts`.nothrow()
@@ -71,7 +106,7 @@ async function main(): Promise<void> {
     [key: string]: unknown
   }
 
-  const scripts = omitKey(
+  let scripts = omitKey(
     {
       ...(pkg.scripts ?? {}),
       build: "bun scripts/build-native.ts",
@@ -79,11 +114,7 @@ async function main(): Promise<void> {
     },
     "build:native"
   )
-
-  const nextDevDependencies = {
-    ...omitKey(pkg.devDependencies ?? {}, "bunup"),
-    "@types/bun": version,
-  }
+  scripts = omitKey(scripts, "cutover:native-dts")
 
   const nextPkg = {
     ...pkg,
@@ -93,12 +124,16 @@ async function main(): Promise<void> {
       bun: `>=${version}`,
     },
     scripts,
-    devDependencies: nextDevDependencies,
+    devDependencies: {
+      ...omitKey(pkg.devDependencies ?? {}, "bunup"),
+      "@types/bun": version,
+    },
   }
 
   await Bun.write(pkgPath, `${JSON.stringify(nextPkg, null, 2)}\n`)
   await rm("bunup.config.ts", { force: true })
   const workflowCount = await pinWorkflowBunVersion(version)
+  await rewritePostCutoverDocs(version)
 
   console.log(
     `Pinned Bun ${version} (packageManager, @types/bun, engines, ${workflowCount} workflow file(s)).`
@@ -110,8 +145,11 @@ async function main(): Promise<void> {
   await $`bun test`
   await $`bun run build`
 
+  // Delete this one-shot script last so a mid-run failure remains recoverable.
+  await rm("scripts/cutover-native-dts.ts", { force: true })
+
   console.log(
-    "Cutover complete. Review package.json + lockfile + workflows, then open a PR. bunup is gone."
+    "Cutover complete. Review package.json + lockfile + workflows + docs, then open a PR. bunup is gone."
   )
 }
 
