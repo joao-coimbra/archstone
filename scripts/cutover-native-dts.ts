@@ -8,16 +8,20 @@
  * - removes temporary `build:native` script
  * - removes the `bunup` dependency
  * - deletes `bunup.config.ts`
+ * - pins `packageManager`, `@types/bun`, `engines.bun`, and CI `bun-version`
+ *   to the Bun version that unlocked native dts
  * - refreshes the lockfile
  * - runs `bun test` and `bun run build`
  *
  * Usage: bun scripts/cutover-native-dts.ts
  */
 
-import { rm } from "node:fs/promises"
+import { readdir, readFile, rm, writeFile } from "node:fs/promises"
+import { join } from "node:path"
 import { $ } from "bun"
 
 const pkgPath = "package.json"
+const workflowDir = ".github/workflows"
 
 function omitKey(
   record: Record<string, unknown>,
@@ -32,6 +36,24 @@ function omitKey(
   return next
 }
 
+async function pinWorkflowBunVersion(version: string): Promise<number> {
+  const bunVersionLine = /bun-version:\s*[\w.-]+/g
+  let updated = 0
+  for (const name of await readdir(workflowDir)) {
+    if (!(name.endsWith(".yml") || name.endsWith(".yaml"))) {
+      continue
+    }
+    const path = join(workflowDir, name)
+    const original = await readFile(path, "utf8")
+    const next = original.replace(bunVersionLine, `bun-version: ${version}`)
+    if (next !== original) {
+      await writeFile(path, next)
+      updated += 1
+    }
+  }
+  return updated
+}
+
 async function main(): Promise<void> {
   console.log("Running probe:native-dts…")
   const probe = await $`bun run probe:native-dts`.nothrow()
@@ -41,9 +63,11 @@ async function main(): Promise<void> {
     )
   }
 
+  const version = Bun.version
   const pkg = (await Bun.file(pkgPath).json()) as {
     scripts?: Record<string, unknown>
     devDependencies?: Record<string, unknown>
+    engines?: Record<string, unknown>
     [key: string]: unknown
   }
 
@@ -56,15 +80,29 @@ async function main(): Promise<void> {
     "build:native"
   )
 
+  const nextDevDependencies = {
+    ...omitKey(pkg.devDependencies ?? {}, "bunup"),
+    "@types/bun": version,
+  }
+
   const nextPkg = {
     ...pkg,
+    packageManager: `bun@${version}`,
+    engines: {
+      ...(pkg.engines ?? {}),
+      bun: `>=${version}`,
+    },
     scripts,
-    devDependencies: omitKey(pkg.devDependencies ?? {}, "bunup"),
+    devDependencies: nextDevDependencies,
   }
 
   await Bun.write(pkgPath, `${JSON.stringify(nextPkg, null, 2)}\n`)
   await rm("bunup.config.ts", { force: true })
+  const workflowCount = await pinWorkflowBunVersion(version)
 
+  console.log(
+    `Pinned Bun ${version} (packageManager, @types/bun, engines, ${workflowCount} workflow file(s)).`
+  )
   console.log("Installing without bunup…")
   await $`bun install`
 
@@ -73,7 +111,7 @@ async function main(): Promise<void> {
   await $`bun run build`
 
   console.log(
-    "Cutover complete. Review package.json + lockfile, then open a PR. bunup is gone."
+    "Cutover complete. Review package.json + lockfile + workflows, then open a PR. bunup is gone."
   )
 }
 
