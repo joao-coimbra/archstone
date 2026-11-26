@@ -78,8 +78,8 @@ async function npmLatestBunVersion(): Promise<string | null> {
   }
 }
 
-const DTS_EXPERIMENTAL_IN_TRACKING = /bun build --dts[`\s)]*\(experimental\)/i
-const DTS_MENTIONED_IN_TRACKING = /bun build --dts/i
+const DTS_EXPERIMENTAL_IN_TRACKING = /bun build --dts[`\s)]*\(experimental\)/iu
+const DTS_MENTIONED_IN_TRACKING = /bun build --dts/iu
 
 async function trackingStillMarksDtsExperimental(): Promise<
   "yes" | "no" | "unknown"

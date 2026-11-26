@@ -141,7 +141,7 @@ a.value.equals(b.value) // ✅ true — same props, different instances
 ```
 
 > **Why value objects?**
-> When you model concepts like `Email`, `Money`, or `Address` as plain strings or numbers, you lose their constraints. A value object forces validation to happen in one place and makes equality semantically correct. Two `Email` instances with the same address *are* the same email.
+> When you model concepts like `Email`, `Money`, or `Address` as plain strings or numbers, you lose their constraints. A value object forces validation to happen in one place and makes equality semantically correct. Two `Email` instances with the same address _are_ the same email.
 
 ---
 
@@ -200,11 +200,11 @@ export class User extends AggregateRoot<UserProps> {
 
   static create(
     props: Optional<UserProps, "createdAt">,
-    id?: UniqueEntityId,
+    id?: UniqueEntityId
   ): User {
     const user = new User(
       { ...props, createdAt: props.createdAt ?? new Date() },
-      id,
+      id
     )
 
     const isNew = !id
@@ -241,10 +241,7 @@ Use cases **always** return `Either`. This forces callers to handle both outcome
 ```ts
 import { Either, left, right } from "archstone/core"
 
-type RegisterResult = Either<
-  UserAlreadyExistsError | InvalidEmailError,
-  User
->
+type RegisterResult = Either<UserAlreadyExistsError | InvalidEmailError, User>
 ```
 
 Narrowing at the call site:
@@ -288,16 +285,17 @@ export interface UserRepository extends Repository<User> {
 
 > **Available segregated contracts:**
 >
-> | Contract | Method |
-> |---|---|
-> | `Findable<T>` | `findById(id: string): Promise<T \| null>` |
-> | `Creatable<T>` | `create(entity: T): Promise<void>` |
-> | `Saveable<T>` | `save(entity: T): Promise<void>` |
-> | `Deletable<T>` | `delete(entity: T): Promise<void>` |
+> | Contract       | Method                                     |
+> | -------------- | ------------------------------------------ |
+> | `Findable<T>`  | `findById(id: string): Promise<T \| null>` |
+> | `Creatable<T>` | `create(entity: T): Promise<void>`         |
+> | `Saveable<T>`  | `save(entity: T): Promise<void>`           |
+> | `Deletable<T>` | `delete(entity: T): Promise<void>`         |
 >
 > Prefer composing only what you need — an audit log repository may only need `Creatable<AuditLog>`.
 
 **Gotchas to remember:**
+
 - `findById()` accepts a plain `string` — pass `user.id.toValue()`, not the `UniqueEntityId` object
 - `delete()` accepts the **full entity**, not an id
 
@@ -308,7 +306,10 @@ import { UseCase } from "archstone/domain/application"
 import { Either, left, right } from "archstone/core"
 import { User } from "../enterprise/user.ts"
 import { Email } from "../enterprise/email.ts"
-import { UserAlreadyExistsError, InvalidEmailError } from "../enterprise/errors.ts"
+import {
+  UserAlreadyExistsError,
+  InvalidEmailError,
+} from "../enterprise/errors.ts"
 import { UserRepository } from "./user-repository.ts"
 
 type RegisterUserInput = {
@@ -326,7 +327,10 @@ export class RegisterUserUseCase
 {
   constructor(private readonly users: UserRepository) {}
 
-  async execute({ name, email }: RegisterUserInput): Promise<RegisterUserOutput> {
+  async execute({
+    name,
+    email,
+  }: RegisterUserInput): Promise<RegisterUserOutput> {
     // Validate the email — returns Either
     const emailOrError = Email.create(email)
     if (emailOrError.isLeft()) return left(emailOrError.value)
@@ -411,7 +415,7 @@ async create(user: User): Promise<void> {
 ```
 
 > **Why dispatch after persistence?**
-> If you sent the welcome email *before* committing to the database and then the write failed, you would have a user who received a welcome email but does not exist in the system. Dispatching after persistence guarantees that side effects only happen when the state change is durable.
+> If you sent the welcome email _before_ committing to the database and then the write failed, you would have a user who received a welcome email but does not exist in the system. Dispatching after persistence guarantees that side effects only happen when the state change is durable.
 
 ### 7.4 Test isolation
 
@@ -503,15 +507,15 @@ async save(user: User): Promise<void> {
 
 Available methods on any `WatchedList`:
 
-| Method | Returns |
-|---|---|
-| `getItems()` | All current items |
-| `getNewItems()` | Items added since construction |
-| `getRemovedItems()` | Items removed since construction |
-| `exists(item)` | Whether an item is currently in the list |
-| `add(item)` | Add and track as new |
-| `remove(item)` | Remove and track as removed |
-| `update(items)` | Replace all, auto-computing the diff |
+| Method              | Returns                                  |
+| ------------------- | ---------------------------------------- |
+| `getItems()`        | All current items                        |
+| `getNewItems()`     | Items added since construction           |
+| `getRemovedItems()` | Items removed since construction         |
+| `exists(item)`      | Whether an item is currently in the list |
+| `add(item)`         | Add and track as new                     |
+| `remove(item)`      | Remove and track as removed              |
+| `update(items)`     | Replace all, auto-computing the diff     |
 
 ---
 
@@ -538,12 +542,12 @@ RegisterUserUseCase.execute({ name, email })
 
 Each layer has one responsibility:
 
-| Layer | Responsibility |
-|---|---|
-| `core` | Language-level utilities — `Either`, `UniqueEntityId`, `ValueObject`, events |
-| `domain/enterprise` | Business rules — entities, aggregates, value objects |
-| `domain/application` | Orchestration — use cases, repository interfaces |
-| `infrastructure` | Implementation details — database, HTTP, email (not in this library) |
+| Layer                | Responsibility                                                               |
+| -------------------- | ---------------------------------------------------------------------------- |
+| `core`               | Language-level utilities — `Either`, `UniqueEntityId`, `ValueObject`, events |
+| `domain/enterprise`  | Business rules — entities, aggregates, value objects                         |
+| `domain/application` | Orchestration — use cases, repository interfaces                             |
+| `infrastructure`     | Implementation details — database, HTTP, email (not in this library)         |
 
 ---
 
@@ -611,7 +615,10 @@ test("rejects an invalid email", async () => {
 
 test("rejects a duplicate email", async () => {
   await sut.execute({ name: "Ada", email: "ada@example.com" })
-  const result = await sut.execute({ name: "Ada Lovelace", email: "ada@example.com" })
+  const result = await sut.execute({
+    name: "Ada Lovelace",
+    email: "ada@example.com",
+  })
 
   expect(result.isLeft()).toBe(true)
   expect(result.value).toBeInstanceOf(UserAlreadyExistsError)

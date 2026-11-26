@@ -1,4 +1,5 @@
-import { type DomainEvent, DomainEvents } from "@/core/index"
+import type { DomainEvent } from "@/core/index"
+import { DomainEvents } from "@/core/index"
 import { Entity } from "./entity"
 
 /**

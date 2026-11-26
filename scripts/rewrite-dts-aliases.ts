@@ -10,7 +10,7 @@
 import { readdir } from "node:fs/promises"
 import { dirname, join, relative, sep } from "node:path"
 
-const ALIAS_RE = /from\s+(["'])@\/([^"']+)\1/g
+const ALIAS_RE = /from\s+(["'])@\/([^"']+)\1/gu
 
 async function collectDtsFiles(root: string): Promise<string[]> {
   const files: string[] = []
