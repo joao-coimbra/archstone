@@ -11,8 +11,8 @@
  * Known blockers as of Bun 1.4.5 / 1.4.6-canary:
  * - Stable has no `--dts` (JS only).
  * - Canary `--dts` is still experimental for 1.5.
- * - Canary CLI emits `@/` path aliases inside `.d.ts` — unusable for npm
- *   consumers (bunup rewrites those away today).
+ * - Canary CLI emits `@/` path aliases inside `.d.ts`; `rewriteDtsAliases`
+ *   converts them to relative imports (same job bunup does today).
  *
  * When this exits 0: point `build`/`dev` at the native script, remove bunup
  * + bunup.config.ts (and any temporary dual scripts), re-pin Bun, open a PR.
@@ -24,6 +24,7 @@ import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { $ } from "bun"
+import { rewriteDtsAliases } from "./rewrite-dts-aliases"
 
 const ENTRYPOINTS = [
   "./src/index.ts",
@@ -155,6 +156,9 @@ async function runConsumerSmoke(outdir: string): Promise<void> {
           "archstone/domain/enterprise": [
             join(outdir, "domain/enterprise/index.d.ts"),
           ],
+          failcraft: [
+            join(process.cwd(), "node_modules/failcraft/dist/index.d.ts"),
+          ],
         },
       },
       include: ["./smoke.ts"],
@@ -227,6 +231,9 @@ async function main(): Promise<number> {
         : `missing .d.ts: ${missingSubpaths.join(", ") || "(none emitted)"}`
     )
 
+    if (dtsFiles.length > 0) {
+      await rewriteDtsAliases(outdir)
+    }
     const aliasHits = await findAliasLeaks(outdir, dtsFiles)
     record(
       "no-path-alias-leak",

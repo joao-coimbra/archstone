@@ -5,8 +5,8 @@
  * Uses the CLI (`bun build --dts`) because `Bun.build({ dts: true })` still
  * panics on cross-module class types in canary (#49457).
  *
- * Fails closed unless every published entry has `.d.ts` and those files do
- * not leak `@/` path aliases (npm consumers cannot resolve them).
+ * After emit, rewrites `@/` aliases in `.d.ts` to relative `.js` imports so
+ * npm consumers can resolve types (Bun does not rewrite them yet).
  *
  * Keep `bun run build` on bunup until `bun run probe:native-dts` exits 0.
  *
@@ -16,6 +16,7 @@
 import { readdir, rm } from "node:fs/promises"
 import { join } from "node:path"
 import { $ } from "bun"
+import { rewriteDtsAliases } from "./rewrite-dts-aliases"
 
 const OUTDIR = "dist"
 
@@ -76,6 +77,8 @@ async function main(): Promise<void> {
     )
   }
 
+  const rewritten = await rewriteDtsAliases(OUTDIR)
+
   const dtsFiles = await collectDtsFiles(OUTDIR)
   const aliasHits: string[] = []
   for (const file of dtsFiles) {
@@ -86,13 +89,12 @@ async function main(): Promise<void> {
   }
   if (aliasHits.length > 0) {
     throw new Error(
-      `Native .d.ts still contain @/ path aliases (${aliasHits.length} files). ` +
-        "That breaks npm consumers — keep bunup until Bun rewrites aliases in declarations."
+      `Native .d.ts still contain @/ path aliases after rewrite (${aliasHits.length} files).`
     )
   }
 
   console.log(
-    `Native build ok — ${dtsFiles.length} .d.ts file(s) in ${OUTDIR}/`
+    `Native build ok — ${dtsFiles.length} .d.ts file(s) in ${OUTDIR}/ (rewrote aliases in ${rewritten})`
   )
 }
 
