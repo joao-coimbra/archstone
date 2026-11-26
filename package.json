@@ -86,6 +86,7 @@
     "check": "ultracite check",
     "fix": "ultracite fix",
     "probe:native-dts": "bun scripts/probe-native-dts.ts",
+    "cutover:native-dts": "bun scripts/cutover-native-dts.ts",
     "release": "bun publish --access public",
     "prepublishOnly": "bun run build",
     "prepare": "bunx husky"

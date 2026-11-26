@@ -67,7 +67,7 @@ src/
 
 Use **Bun 1.4** exclusively — never Node.js, npm, yarn, or pnpm. The repo pins `packageManager` to `bun@1.4.5`.
 
-Library builds still use **bunup** because stable Bun does not yet emit `.d.ts` (`bun build --dts` lands in 1.5). The cutover target is `bun run build:native` (CLI `bun build --dts` + `scripts/rewrite-dts-aliases.ts` to convert `@/` imports for npm consumers). Do not remove bunup until `bun run probe:native-dts` exits 0 on a stable Bun release.
+Library builds still use **bunup** because stable Bun does not yet emit `.d.ts` (`bun build --dts` lands in 1.5). When `bun run probe:native-dts` exits 0 on a stable release, run `bun run cutover:native-dts` — it switches `build`/`dev` to the native path, removes `bunup` + `bunup.config.ts`, and verifies tests/build. Do not leave bunup installed after cutover.
 
 | Task | Command |
 |------|---------|

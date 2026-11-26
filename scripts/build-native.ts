@@ -10,7 +10,7 @@
  *
  * Keep `bun run build` on bunup until `bun run probe:native-dts` exits 0.
  *
- * Usage: bun scripts/build-native.ts
+ * Usage: bun scripts/build-native.ts [--watch]
  */
 
 import { readdir, rm } from "node:fs/promises"
@@ -19,6 +19,7 @@ import { $ } from "bun"
 import { rewriteDtsAliases } from "./rewrite-dts-aliases"
 
 const OUTDIR = "dist"
+const watch = process.argv.includes("--watch")
 
 const ENTRYPOINTS = [
   "./src/index.ts",
@@ -55,13 +56,22 @@ async function collectDtsFiles(root: string): Promise<string[]> {
 async function main(): Promise<void> {
   await rm(OUTDIR, { recursive: true, force: true })
 
+  const watchArgs = watch ? ["--watch"] : []
   const build =
-    await $`bun build ${ENTRYPOINTS} --outdir ${OUTDIR} --root ./src --format esm --target bun --splitting --minify --dts`.nothrow()
+    await $`bun build ${ENTRYPOINTS} --outdir ${OUTDIR} --root ./src --format esm --target bun --splitting --minify --dts ${watchArgs}`.nothrow()
 
   if (build.exitCode !== 0) {
     throw new Error(
       `bun build --dts failed (exit ${build.exitCode}). Keep bunup until probe:native-dts passes.`
     )
+  }
+
+  if (watch) {
+    // Watch mode is long-running; alias rewrite runs on each rebuild via a
+    // follow-up once Bun supports a post-build hook. For now require non-watch
+    // cutover builds for publishable output.
+    console.log("Watch mode started (alias rewrite runs on non-watch builds).")
+    return
   }
 
   const missing: string[] = []
