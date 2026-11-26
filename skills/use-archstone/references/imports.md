@@ -8,6 +8,6 @@
 | `WatchedList` | `archstone/core` |
 | `Optional` | `archstone/core` |
 | `Entity`, `AggregateRoot` | `archstone/domain/enterprise` |
-| `DomainEvents`, `EventHandler` | `archstone/domain/enterprise` |
+| `DomainEvent`, `DomainEvents`, `EventHandler` | `archstone/core` |
 | `UseCase`, `UseCaseError` | `archstone/domain/application` |
 | `Repository`, `Findable`, `Creatable`, `Saveable`, `Deletable` | `archstone/domain/application` |

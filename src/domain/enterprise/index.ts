@@ -1,15 +1,11 @@
-/** @deprecated use `archstone/core` instead */
+/**
+ * @deprecated Import `DomainEvent`, `DomainEvents`, and `EventHandler` from
+ * `archstone/core` instead. `EventHandler` there is generic: `EventHandler<T>`.
+ */
 export {
   type DomainEvent,
   DomainEvents,
+  type EventHandler,
 } from "@/core/index"
 
 export * from "./entities/index"
-
-/**
- * @deprecated use `EventHandler` from `archstone/core` instead.
- * The new version supports generic typing via `EventHandler<T>`.
- */
-export interface EventHandler {
-  setupSubscriptions(): void
-}

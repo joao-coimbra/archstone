@@ -41,7 +41,7 @@ test('returns error when user not found', async () => {
 ## Domain Event Isolation
 
 ```ts
-import { DomainEvents } from 'archstone/domain/enterprise'
+import { DomainEvents } from 'archstone/core'
 
 beforeEach(() => {
   DomainEvents.clearHandlers()

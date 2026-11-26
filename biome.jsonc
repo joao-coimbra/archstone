@@ -23,5 +23,13 @@
     "formatter": {
       "semicolons": "asNeeded"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["scripts/**"],
+      "javascript": {
+        "globals": ["Bun"]
+      }
+    }
+  ]
 }
