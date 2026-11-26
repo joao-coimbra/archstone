@@ -19,6 +19,19 @@ import { $ } from "bun"
 
 const pkgPath = "package.json"
 
+function omitKey(
+  record: Record<string, unknown>,
+  key: string
+): Record<string, unknown> {
+  const next: Record<string, unknown> = {}
+  for (const [entryKey, value] of Object.entries(record)) {
+    if (entryKey !== key) {
+      next[entryKey] = value
+    }
+  }
+  return next
+}
+
 async function main(): Promise<void> {
   console.log("Running probe:native-dts…")
   const probe = await $`bun run probe:native-dts`.nothrow()
@@ -28,18 +41,28 @@ async function main(): Promise<void> {
     )
   }
 
-  const pkg = await Bun.file(pkgPath).json()
-  pkg.scripts = {
-    ...pkg.scripts,
-    build: "bun scripts/build-native.ts",
-    dev: "bun scripts/build-native.ts --watch",
-  }
-  delete pkg.scripts["build:native"]
-  if (pkg.devDependencies?.bunup) {
-    delete pkg.devDependencies.bunup
+  const pkg = (await Bun.file(pkgPath).json()) as {
+    scripts?: Record<string, unknown>
+    devDependencies?: Record<string, unknown>
+    [key: string]: unknown
   }
 
-  await Bun.write(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`)
+  const scripts = omitKey(
+    {
+      ...(pkg.scripts ?? {}),
+      build: "bun scripts/build-native.ts",
+      dev: "bun scripts/build-native.ts --watch",
+    },
+    "build:native"
+  )
+
+  const nextPkg = {
+    ...pkg,
+    scripts,
+    devDependencies: omitKey(pkg.devDependencies ?? {}, "bunup"),
+  }
+
+  await Bun.write(pkgPath, `${JSON.stringify(nextPkg, null, 2)}\n`)
   await rm("bunup.config.ts", { force: true })
 
   console.log("Installing without bunup…")
