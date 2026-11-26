@@ -5,16 +5,15 @@
 - Extend `Entity<Props>` for identity-only entities
 - Extend `AggregateRoot<Props>` for entities that raise domain events
 - Always use a static `create()` factory — constructor stays `protected`
-- Identity is the **second constructor argument** (`id?: UniqueEntityId`) — do **not** put `id` inside `Props`
-- Use `Optional<T, K>` for auto-generated fields in props (e.g. `"createdAt"`)
-- Use `UniqueEntityId` (UUID v7 via Bun) — never a plain `string` as identity
-- `id.toValue()` / `id.toString()` for the raw string; `id.equals(other)` for comparison
+- Include `id` as an optional field in `Props` and pass it as the second constructor argument
+- Use `Optional<T, K>` for auto-generated fields (e.g. `'id' | 'createdAt'`)
+- Use `UniqueEntityId` — never a plain `string`
 
 ## Entity Example
 
 ```ts
-import { Entity } from "archstone/domain/enterprise"
-import { UniqueEntityId, type Optional } from "archstone/core"
+import { Entity } from 'archstone/domain/enterprise'
+import { UniqueEntityId, type Optional } from 'archstone/core'
 
 interface ProductProps {
   name: string
@@ -23,20 +22,13 @@ interface ProductProps {
 }
 
 class Product extends Entity<ProductProps> {
-  get name() {
-    return this.props.name
-  }
-  get price() {
-    return this.props.price
-  }
+  get name()  { return this.props.name }
+  get price() { return this.props.price }
 
-  static create(
-    props: Optional<ProductProps, "createdAt">,
-    id?: UniqueEntityId
-  ): Product {
+  static create(props: Optional<ProductProps, 'createdAt'>, id?: UniqueEntityId): Product {
     return new Product(
       { ...props, createdAt: props.createdAt ?? new Date() },
-      id ?? new UniqueEntityId()
+      id ?? new UniqueEntityId(),
     )
   }
 }
@@ -45,8 +37,8 @@ class Product extends Entity<ProductProps> {
 ## AggregateRoot Example
 
 ```ts
-import { AggregateRoot } from "archstone/domain/enterprise"
-import { type DomainEvent, UniqueEntityId, type Optional } from "archstone/core"
+import { AggregateRoot } from 'archstone/domain/enterprise'
+import { UniqueEntityId, type Optional } from 'archstone/core'
 
 interface OrderProps {
   customerId: UniqueEntityId
@@ -54,29 +46,14 @@ interface OrderProps {
   createdAt: Date
 }
 
-class OrderCreatedEvent implements DomainEvent {
-  occurredAt = new Date()
-  constructor(public readonly order: Order) {}
-  getAggregateId() {
-    return this.order.id
-  }
-}
-
 class Order extends AggregateRoot<OrderProps> {
-  get customerId() {
-    return this.props.customerId
-  }
-  get total() {
-    return this.props.total
-  }
+  get customerId() { return this.props.customerId }
+  get total()      { return this.props.total }
 
-  static create(
-    props: Optional<OrderProps, "createdAt">,
-    id?: UniqueEntityId
-  ): Order {
+  static create(props: Optional<OrderProps, 'createdAt'>, id?: UniqueEntityId): Order {
     const order = new Order(
       { ...props, createdAt: props.createdAt ?? new Date() },
-      id ?? new UniqueEntityId()
+      id ?? new UniqueEntityId(),
     )
     order.addDomainEvent(new OrderCreatedEvent(order))
     return order
@@ -88,15 +65,11 @@ class Order extends AggregateRoot<OrderProps> {
 
 ```ts
 // ❌ plain class
-class Order {
-  id: string
-}
+class Order { id: string }
 
 // ❌ id not passed as second constructor arg
 return new Order(props) // id goes as second arg: new Order(props, id)
 
-// ❌ string id in Props as identity
-interface OrderProps {
-  id: string
-} // use UniqueEntityId as the second constructor arg instead
+// ❌ string id
+interface OrderProps { id: string } // use UniqueEntityId
 ```

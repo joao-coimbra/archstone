@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, mock } from "bun:test"
-import type { DomainEvent, UniqueEntityId } from "@/core/index"
-import { DomainEvents } from "@/core/index"
+import {
+  type DomainEvent,
+  DomainEvents,
+  type UniqueEntityId,
+} from "@/core/index"
 import { AggregateRoot } from "@/domain/enterprise/index"
 
 class CustomAggregateCreated implements DomainEvent {

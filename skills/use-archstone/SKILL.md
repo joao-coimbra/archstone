@@ -1,6 +1,6 @@
 ---
 name: archstone
-description: 'Apply Archstone DDD and Clean Architecture conventions. Use when developers: (1) Create domain entities, aggregates, or value objects, (2) Write application use cases, (3) Define repository contracts, (4) Work with domain events or event handlers, (5) Ask about Either, Maybe, UniqueEntityId, WatchedList, DomainEvents, shouldRun, or UseCaseError. Triggers on: "entity", "aggregate", "value object", "use case", "repository", "domain event", "Either", "Maybe", "UniqueEntityId", "WatchedList", "DomainEvents", "archstone".'
+description: 'Apply Archstone DDD and Clean Architecture conventions. Use when developers: (1) Create domain entities, aggregates, or value objects, (2) Write application use cases, (3) Define repository contracts, (4) Work with domain events or event handlers, (5) Ask about Either, UniqueEntityId, WatchedList, or UseCaseError. Triggers on: "entity", "aggregate", "value object", "use case", "repository", "domain event", "Either", "UniqueEntityId", "archstone".'
 ---
 
 ## Critical: Follow Archstone Conventions
@@ -10,16 +10,13 @@ Everything you know about DDD patterns may differ from how Archstone implements 
 When working with Archstone:
 
 1. Check `node_modules/archstone/` for the installed version
-2. Import from public entry points only (`archstone/core`, `archstone/domain/enterprise`, `archstone/domain/application`) — never deep paths
-3. All entities must extend `Entity<Props>` or `AggregateRoot<Props>` — never use plain classes
-4. All value objects must extend `ValueObject<Props>`
-5. Use cases must implement `UseCase<Input, Output>` and **never throw** — return `Either` or `Maybe`
-6. `Findable.findById` returns `Promise<Maybe<T>>` — check with `.isNothing()` / `.isJust()`, unwrap with `.value` (never treat as `T | null`)
-7. Repository contracts are interfaces only — implementations belong in infrastructure
-8. Domain events are raised inside aggregates and dispatched after persistence — never before
-9. Import `DomainEvent`, `DomainEvents`, and `EventHandler<T>` from `archstone/core` (enterprise re-exports are deprecated)
-10. Use `UniqueEntityId` (UUID v7) for all entity identifiers — never a plain `string` as identity
-11. Use case errors must `implement UseCaseError` — not `extend Error`
+2. All entities must extend `Entity<Props>` or `AggregateRoot<Props>` — never use plain classes
+3. All value objects must extend `ValueObject<Props>`
+4. Use cases must implement `UseCase<Input, Output>` and **never throw** — always return `Either`
+5. Repository contracts are interfaces only — implementations belong in infrastructure
+6. Domain events are raised inside aggregates and dispatched after persistence — never before
+7. Use `UniqueEntityId` for all entity identifiers — never a plain `string`
+8. The left side of `Either` must `implement UseCaseError` — not `extend Error`
 
 If you are unsure about a pattern, check [Conventions Reference](references/conventions.md) before writing code.
 
@@ -31,31 +28,27 @@ See [Layer Rules](references/layers.md) for details.
 
 ## Entities & Aggregates
 
-Use a static `create()` factory. Pass `id` as the second constructor argument (not inside `Props`). Use `Optional<T, K>` for auto-generated fields like `createdAt`. See [Entity Patterns](references/entity.md).
+Use a static `create()` factory. Pass `id` as the second constructor argument. Use `Optional<T, K>` for auto-generated fields. See [Entity Patterns](references/entity.md).
 
 ## Value Objects
 
-Use a static `create()` factory with validation. Prefer returning `Either` when callers must handle failure; if `create()` throws, wrap with `attempt()` or `try/catch` in use cases and return `left()`. See [Value Object Patterns](references/value-object.md).
+Use a static `create()` factory with validation. Value object `create()` may throw — wrap calls inside use cases with `try/catch` and return `left()`. See [Value Object Patterns](references/value-object.md).
 
 ## Use Cases
 
-Implement `UseCase<Input, Output>`. Output is `Either<UseCaseError, Value>` or `Maybe<Value>`. Error classes must `implement UseCaseError`. See [Use Case Patterns](references/use-case.md).
+Implement `UseCase<Input, Output>`. Return `left()` for errors, `right()` for success. Error classes must `implement UseCaseError`. See [Use Case Patterns](references/use-case.md).
 
 ## Repository Contracts
 
-Define as interfaces only. Use `Repository<T>` or compose `Findable`, `Creatable`, `Saveable`, `Deletable`. `findById` takes `string` (`entity.id.toValue()`) and returns `Promise<Maybe<T>>`. See [Repository Patterns](references/repository.md).
+Define as interfaces only. Use `Repository<T>` or compose `Findable`, `Creatable`, `Saveable`, `Deletable`. Note: `findById` takes `string` — pass `entity.id.toValue()`. See [Repository Patterns](references/repository.md).
 
 ## Domain Events
 
-Raise inside the aggregate via `addDomainEvent()`. Dispatch after persistence via `DomainEvents.dispatchEventsForAggregate(aggregate.id)`. Handlers implement `EventHandler<T>` from `archstone/core`. In tests, use `clearHandlers` / `clearMarkedAggregates` / `shouldRun`. See [Domain Event Patterns](references/domain-events.md).
-
-## WatchedList
-
-Subclass `WatchedList<T>` and implement `compareItems`. Use for aggregate-owned collections that need add/remove tracking. See [WatchedList Patterns](references/watched-list.md).
+Raise inside the aggregate via `addDomainEvent()`. Dispatch after persistence via `DomainEvents.dispatchEventsForAggregate(aggregate.id)`. Define handlers as classes implementing `EventHandler<T>`. See [Domain Event Patterns](references/domain-events.md).
 
 ## Testing
 
-Use `bun:test`. Co-locate test files as `*.spec.ts`. Use in-memory repository implementations. Isolate `DomainEvents` in `beforeEach`. See [Testing Patterns](references/testing.md).
+Use `bun:test`. Co-locate test files as `*.spec.ts`. Use in-memory repository implementations. See [Testing Patterns](references/testing.md).
 
 ## References
 
@@ -64,8 +57,7 @@ Use `bun:test`. Co-locate test files as `*.spec.ts`. Use in-memory repository im
 - [Layers](references/layers.md) — layer boundary rules
 - [Entity Patterns](references/entity.md) — Entity and AggregateRoot examples
 - [Value Object Patterns](references/value-object.md) — ValueObject examples
-- [Use Case Patterns](references/use-case.md) — UseCase, Either, and Maybe examples
+- [Use Case Patterns](references/use-case.md) — UseCase and Either examples
 - [Repository Patterns](references/repository.md) — repository interface and in-memory examples
-- [Domain Event Patterns](references/domain-events.md) — EventHandler, shouldRun, and dispatch examples
-- [WatchedList Patterns](references/watched-list.md) — collection change tracking
+- [Domain Event Patterns](references/domain-events.md) — EventHandler and dispatch examples
 - [Testing Patterns](references/testing.md) — bun:test and in-memory repo examples

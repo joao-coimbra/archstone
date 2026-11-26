@@ -2,23 +2,21 @@
 
 ## core/
 
-Zero domain knowledge. Contains only pure language utilities and the domain-events bus.
+Zero domain knowledge. Contains only pure language utilities.
 
-Exports: `Either`, `left`, `right`, `Maybe`, `just`, `nothing`, `maybe`, `attempt`, `from`, `ValueObject`, `UniqueEntityId`, `WatchedList`, `Optional`, `DomainEvent`, `DomainEvents`, `EventHandler`
+Exports: `Either`, `left`, `right`, `ValueObject`, `UniqueEntityId`, `WatchedList`, `Optional`
 
 ## domain/enterprise/
 
 Pure domain model. No framework or infrastructure dependencies.
 
-Contains: `Entity`, `AggregateRoot` (and domain types that extend them).
-
-`DomainEvent` / `DomainEvents` / `EventHandler` live in `core`. Enterprise still re-exports some of them as `@deprecated` — do not use those paths in new code.
+Contains: entities, aggregates, value objects, domain events, event handlers.
 
 ## domain/application/
 
 Orchestration layer. Use cases and repository contracts only.
 
-Contains: `UseCase`, `UseCaseError`, `Repository`, `Findable`, `Creatable`, `Saveable`, `Deletable`.
+Contains: use case interfaces, use case error contracts, repository interfaces.
 
 ## Infrastructure (outside domain/)
 
@@ -29,7 +27,7 @@ Repository implementations belong here, not in `domain/`.
 ## Rule
 
 ```
-core/ ← no deps on domain
+core/ ← no deps
 domain/enterprise/ ← imports from core/ only
 domain/application/ ← imports from core/ and domain/enterprise/
 infrastructure/ ← imports from all layers, implements domain/application/ contracts

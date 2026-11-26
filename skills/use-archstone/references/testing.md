@@ -2,17 +2,16 @@
 
 ## Rules
 
-- Use `bun:test` — import `describe`, `it`, `expect`, `beforeEach`, `afterEach` from `bun:test`
+- Use `bun:test` — import `test`, `expect`, `beforeEach` from `bun:test`
 - Test files: `*.spec.ts` co-located with the source file they test
 - Use in-memory repository implementations for use case tests — never mock databases
-- Isolate `DomainEvents` between tests
 
 ## Use Case Test Example
 
 ```ts
-import { beforeEach, expect, it } from "bun:test"
-import { GetUserUseCase } from "./get-user"
-import { InMemoryUserRepository } from "@/test/repositories/in-memory-user-repository"
+import { test, expect, beforeEach } from 'bun:test'
+import { GetUserUseCase } from './get-user'
+import { InMemoryUserRepository } from '@/test/repositories/in-memory-user-repository'
 
 let repo: InMemoryUserRepository
 let useCase: GetUserUseCase
@@ -22,18 +21,18 @@ beforeEach(() => {
   useCase = new GetUserUseCase(repo)
 })
 
-it("returns user when found", async () => {
-  const user = User.create({ name: "João" })
+test('returns user when found', async () => {
+  const user = User.create({ name: 'João' })
   await repo.create(user)
 
   const result = await useCase.execute({ userId: user.id.toValue() })
 
   expect(result.isRight()).toBe(true)
-  if (result.isRight()) expect(result.value).toEqual(user)
+  expect(result.value).toEqual(user)
 })
 
-it("returns error when user not found", async () => {
-  const result = await useCase.execute({ userId: "non-existent" })
+test('returns error when user not found', async () => {
+  const result = await useCase.execute({ userId: 'non-existent' })
 
   expect(result.isLeft()).toBe(true)
 })
@@ -42,14 +41,10 @@ it("returns error when user not found", async () => {
 ## Domain Event Isolation
 
 ```ts
-import { DomainEvents } from "archstone/core"
+import { DomainEvents } from 'archstone/domain/enterprise'
 
 beforeEach(() => {
   DomainEvents.clearHandlers()
   DomainEvents.clearMarkedAggregates()
-  DomainEvents.shouldRun = true
 })
-
-// Suppress dispatch without clearing registered handlers:
-// DomainEvents.shouldRun = false
 ```
