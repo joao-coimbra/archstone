@@ -1,21 +1,26 @@
 #!/usr/bin/env bun
 /**
- * Readiness probe for migrating Archstone off bunup onto native `Bun.build({ dts: true })`.
+ * Readiness probe for migrating Archstone off bunup onto native `bun build --dts`.
  *
  * Exit 0 only when every migration gate passes. Until then, keep bunup.
  *
- * Known blockers as of Bun 1.4.5 / 1.4.6-canary:
- * - Stable ignores `dts: true` (JS only).
- * - Canary lists `--dts` as experimental for 1.5 and panics on this
- *   package with "too little stack for a task" even for a single entry.
+ * Prefer the CLI (`bun build --dts`) over `Bun.build({ dts: true })`:
+ * canary's JS API still panics on class/typeof cross-module types (#49457),
+ * while the CLI can emit declarations for this package.
  *
- * When this exits 0: switch `package.json` build scripts to
- * `build:native`, remove bunup + bunup.config.ts, and re-pin Bun.
+ * Known blockers as of Bun 1.4.5 / 1.4.6-canary:
+ * - Stable has no `--dts` (JS only).
+ * - Canary `--dts` is still experimental for 1.5.
+ * - Canary CLI emits `@/` path aliases inside `.d.ts` — unusable for npm
+ *   consumers (bunup rewrites those away today).
+ *
+ * When this exits 0: point `build`/`dev` at the native script, remove bunup
+ * + bunup.config.ts (and any temporary dual scripts), re-pin Bun, open a PR.
  *
  * Usage: bun scripts/probe-native-dts.ts
  */
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { $ } from "bun"
@@ -46,8 +51,7 @@ const gates: Gate[] = []
 
 function record(id: string, ok: boolean, detail: string): void {
   gates.push({ id, ok, detail })
-  const mark = ok ? "PASS" : "FAIL"
-  console.log(`[${mark}] ${id}: ${detail}`)
+  console.log(`[${ok ? "PASS" : "FAIL"}] ${id}: ${detail}`)
 }
 
 async function helpMentionsDts(): Promise<boolean> {
@@ -55,9 +59,24 @@ async function helpMentionsDts(): Promise<boolean> {
   return result.stdout.toString().includes("--dts")
 }
 
+async function collectDtsFiles(root: string): Promise<string[]> {
+  const files: string[] = []
+  async function walk(dir: string): Promise<void> {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name)
+      if (entry.isDirectory()) {
+        await walk(path)
+      } else if (entry.name.endsWith(".d.ts")) {
+        files.push(path)
+      }
+    }
+  }
+  await walk(root)
+  return files
+}
+
 async function main(): Promise<number> {
-  const version = Bun.version
-  console.log(`probe-native-dts — Bun ${version}\n`)
+  console.log(`probe-native-dts — Bun ${Bun.version}\n`)
 
   const helpHasDts = await helpMentionsDts()
   record(
@@ -70,50 +89,69 @@ async function main(): Promise<number> {
 
   const outdir = await mkdtemp(join(tmpdir(), "archstone-native-dts-"))
   try {
-    const result = await Bun.build({
-      entrypoints: [...ENTRYPOINTS],
-      outdir,
-      format: "esm",
-      target: "bun",
-      splitting: true,
-      dts: true,
-    })
+    const build =
+      await $`bun build ${ENTRYPOINTS} --outdir ${outdir} --root ./src --format esm --target bun --splitting --dts`
+        .quiet()
+        .nothrow()
 
+    const buildOk = build.exitCode === 0
     record(
       "multi-entry-build",
-      result.success,
-      result.success
-        ? `Bun.build succeeded (${result.outputs.length} outputs)`
-        : `Bun.build failed: ${result.logs.map(String).join("; ") || "unknown error"}`
+      buildOk,
+      buildOk
+        ? "bun build --dts succeeded"
+        : (
+            build.stderr.toString().trim() ||
+            build.stdout.toString().trim() ||
+            `bun build --dts exited ${build.exitCode}`
+          ).slice(0, 500)
     )
 
-    const dtsOutputs = result.outputs.filter((output) =>
-      output.path.endsWith(".d.ts")
-    )
+    const dtsFiles = buildOk ? await collectDtsFiles(outdir) : []
     record(
       "dts-emitted",
-      dtsOutputs.length > 0,
-      dtsOutputs.length > 0
-        ? `emitted ${dtsOutputs.length} .d.ts file(s)`
-        : "`dts: true` produced no .d.ts (ignored or unsupported)"
+      dtsFiles.length > 0,
+      dtsFiles.length > 0
+        ? `emitted ${dtsFiles.length} .d.ts file(s)`
+        : "`--dts` produced no .d.ts (ignored or unsupported)"
     )
 
     const missingSubpaths: string[] = []
     for (const relative of SUBPATH_DTS) {
-      const file = Bun.file(join(outdir, relative))
-      if (!(await file.exists())) {
+      if (!(await Bun.file(join(outdir, relative)).exists())) {
         missingSubpaths.push(relative)
       }
     }
     record(
       "subpath-dts",
-      missingSubpaths.length === 0 && dtsOutputs.length > 0,
-      missingSubpaths.length === 0 && dtsOutputs.length > 0
+      missingSubpaths.length === 0 && dtsFiles.length > 0,
+      missingSubpaths.length === 0 && dtsFiles.length > 0
         ? "all published subpaths have index.d.ts"
         : `missing .d.ts: ${missingSubpaths.join(", ") || "(none emitted)"}`
     )
 
-    if (missingSubpaths.length === 0 && dtsOutputs.length > 0) {
+    const aliasHits: string[] = []
+    for (const file of dtsFiles) {
+      const text = await Bun.file(file).text()
+      if (text.includes('"@/') || text.includes("'@/")) {
+        aliasHits.push(file.replace(`${outdir}/`, ""))
+      }
+    }
+    record(
+      "no-path-alias-leak",
+      dtsFiles.length > 0 && aliasHits.length === 0,
+      dtsFiles.length === 0
+        ? "skipped — no .d.ts to inspect"
+        : aliasHits.length === 0
+          ? "no `@/` imports in emitted .d.ts"
+          : "@/" still appears in: ${aliasHits.slice(0, 8).join(", ")}${aliasHits.length > 8 ? "…" : ""}`
+    )
+
+    if (
+      missingSubpaths.length === 0 &&
+      dtsFiles.length > 0 &&
+      aliasHits.length === 0
+    ) {
       const consumerDir = join(outdir, "consumer-smoke")
       await mkdir(consumerDir, { recursive: true })
       await writeFile(
@@ -179,7 +217,7 @@ void ok
       record(
         "consumer-smoke",
         false,
-        "skipped — subpath .d.ts outputs are incomplete"
+        "skipped — dts outputs are incomplete or still leak `@/`"
       )
     }
   } finally {

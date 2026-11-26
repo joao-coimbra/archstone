@@ -2,15 +2,20 @@
 /**
  * Native Bun library build (replacement target for bunup).
  *
- * Safe to run anytime: fails closed unless `dts: true` actually emits
- * declarations for every published entry point. Keep `bun run build`
- * on bunup until `bun run probe:native-dts` exits 0.
+ * Uses the CLI (`bun build --dts`) because `Bun.build({ dts: true })` still
+ * panics on cross-module class types in canary (#49457).
+ *
+ * Fails closed unless every published entry has `.d.ts` and those files do
+ * not leak `@/` path aliases (npm consumers cannot resolve them).
+ *
+ * Keep `bun run build` on bunup until `bun run probe:native-dts` exits 0.
  *
  * Usage: bun scripts/build-native.ts
  */
 
-import { rm } from "node:fs/promises"
+import { readdir, rm } from "node:fs/promises"
 import { join } from "node:path"
+import { $ } from "bun"
 
 const OUTDIR = "dist"
 
@@ -30,25 +35,32 @@ const REQUIRED_DTS = [
   "domain/enterprise/index.d.ts",
 ] as const
 
+async function collectDtsFiles(root: string): Promise<string[]> {
+  const files: string[] = []
+  async function walk(dir: string): Promise<void> {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name)
+      if (entry.isDirectory()) {
+        await walk(path)
+      } else if (entry.name.endsWith(".d.ts")) {
+        files.push(path)
+      }
+    }
+  }
+  await walk(root)
+  return files
+}
+
 async function main(): Promise<void> {
   await rm(OUTDIR, { recursive: true, force: true })
 
-  const result = await Bun.build({
-    entrypoints: [...ENTRYPOINTS],
-    outdir: OUTDIR,
-    root: "./src",
-    format: "esm",
-    target: "bun",
-    splitting: true,
-    minify: true,
-    dts: true,
-  })
+  const build =
+    await $`bun build ${ENTRYPOINTS} --outdir ${OUTDIR} --root ./src --format esm --target bun --splitting --minify --dts`.nothrow()
 
-  if (!result.success) {
-    for (const log of result.logs) {
-      console.error(String(log))
-    }
-    throw new Error("Bun.build failed")
+  if (build.exitCode !== 0) {
+    throw new Error(
+      `bun build --dts failed (exit ${build.exitCode}). Keep bunup until probe:native-dts passes.`
+    )
   }
 
   const missing: string[] = []
@@ -57,7 +69,6 @@ async function main(): Promise<void> {
       missing.push(relative)
     }
   }
-
   if (missing.length > 0) {
     throw new Error(
       `Native build did not emit required .d.ts files: ${missing.join(", ")}. ` +
@@ -65,11 +76,23 @@ async function main(): Promise<void> {
     )
   }
 
-  const dtsCount = result.outputs.filter((output) =>
-    output.path.endsWith(".d.ts")
-  ).length
+  const dtsFiles = await collectDtsFiles(OUTDIR)
+  const aliasHits: string[] = []
+  for (const file of dtsFiles) {
+    const text = await Bun.file(file).text()
+    if (text.includes('"@/') || text.includes("'@/")) {
+      aliasHits.push(file)
+    }
+  }
+  if (aliasHits.length > 0) {
+    throw new Error(
+      `Native .d.ts still contain @/ path aliases (${aliasHits.length} files). ` +
+        "That breaks npm consumers — keep bunup until Bun rewrites aliases in declarations."
+    )
+  }
+
   console.log(
-    `Native build ok — ${result.outputs.length} outputs (${dtsCount} .d.ts) in ${OUTDIR}/`
+    `Native build ok — ${dtsFiles.length} .d.ts file(s) in ${OUTDIR}/`
   )
 }
 
