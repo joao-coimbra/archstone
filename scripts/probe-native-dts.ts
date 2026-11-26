@@ -77,6 +77,9 @@ async function npmLatestBunVersion(): Promise<string | null> {
   }
 }
 
+const DTS_EXPERIMENTAL_IN_TRACKING = /bun build --dts[`\s)]*\(experimental\)/i
+const DTS_MENTIONED_IN_TRACKING = /bun build --dts/i
+
 async function trackingStillMarksDtsExperimental(): Promise<
   "yes" | "no" | "unknown"
 > {
@@ -94,13 +97,13 @@ async function trackingStillMarksDtsExperimental(): Promise<
     }
     const text = body.body ?? ""
     // Bun 1.5 tracking still lists: `bun build --dts` (experimental)
-    if (/bun build --dts[`\s)]*\(experimental\)/i.test(text)) {
+    if (DTS_EXPERIMENTAL_IN_TRACKING.test(text)) {
       return "yes"
     }
     if (body.state === "closed") {
       return "no"
     }
-    if (/bun build --dts/i.test(text)) {
+    if (DTS_MENTIONED_IN_TRACKING.test(text)) {
       return "no"
     }
     return "unknown"
