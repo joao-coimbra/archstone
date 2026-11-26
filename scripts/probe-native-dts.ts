@@ -11,7 +11,8 @@
  * Known blockers as of Bun 1.4.5 / 1.4.6-canary:
  * - Stable has no `--dts` (JS only).
  * - Canary `--dts` is still experimental for 1.5; this probe refuses any Bun
- *   version that is not the npm `latest` dist-tag (blocks canary cutover).
+ *   version that is not the npm `latest` dist-tag and refuses while
+ *   oven-sh/bun#49571 still marks `bun build --dts` as experimental.
  * - Canary's typechecker rejects `compilerOptions.baseUrl` (TS5102); keep
  *   only `paths` for `@/*`.
  * - Canary CLI may emit `@/` path aliases inside `.d.ts`; `rewriteDtsAliases`
@@ -76,12 +77,46 @@ async function npmLatestBunVersion(): Promise<string | null> {
   }
 }
 
+async function trackingStillMarksDtsExperimental(): Promise<
+  "yes" | "no" | "unknown"
+> {
+  try {
+    const response = await fetch(
+      "https://api.github.com/repos/oven-sh/bun/issues/49571",
+      { headers: { Accept: "application/vnd.github+json" } }
+    )
+    if (!response.ok) {
+      return "unknown"
+    }
+    const body = (await response.json()) as {
+      state?: string
+      body?: string | null
+    }
+    const text = body.body ?? ""
+    // Bun 1.5 tracking still lists: `bun build --dts` (experimental)
+    if (/bun build --dts[`\s)]*\(experimental\)/i.test(text)) {
+      return "yes"
+    }
+    if (body.state === "closed") {
+      return "no"
+    }
+    if (/bun build --dts/i.test(text)) {
+      return "no"
+    }
+    return "unknown"
+  } catch {
+    return "unknown"
+  }
+}
+
 async function recordStableCliDtsGate(): Promise<void> {
   const helpHasDts = await helpMentionsDts()
   const npmLatest = await npmLatestBunVersion()
   const isNpmLatest = npmLatest !== null && Bun.version === npmLatest
+  const experimental = await trackingStillMarksDtsExperimental()
+  const notExperimental = experimental === "no"
 
-  if (!(helpHasDts && isNpmLatest)) {
+  if (!(helpHasDts && isNpmLatest && notExperimental)) {
     const reasons: string[] = []
     if (!helpHasDts) {
       reasons.push("`bun build --help` does not list --dts")
@@ -93,6 +128,13 @@ async function recordStableCliDtsGate(): Promise<void> {
         `Bun ${Bun.version} is not npm latest stable (${npmLatest}) — canary/prerelease blocked`
       )
     }
+    if (experimental === "yes") {
+      reasons.push(
+        "oven-sh/bun#49571 still marks `bun build --dts` as experimental"
+      )
+    } else if (experimental === "unknown") {
+      reasons.push("could not confirm #49571 dropped experimental for --dts")
+    }
     record("stable-cli-dts", false, reasons.join("; "))
     return
   }
@@ -100,7 +142,7 @@ async function recordStableCliDtsGate(): Promise<void> {
   record(
     "stable-cli-dts",
     true,
-    `Bun ${Bun.version} matches npm latest and lists --dts`
+    `Bun ${Bun.version} matches npm latest, lists --dts, and #49571 no longer marks it experimental`
   )
 }
 
