@@ -149,36 +149,17 @@ git checkout main && git pull
 - Stable tags are created automatically by `auto-tag.yml` when `package.json` changes on `main` — do NOT push tags manually after a release PR merges
 - Never `git push --tags` — pushes all local tags including unintended ones
 - Never create git tags for RC versions — tag only stable releases
-- Always use annotated tags (`-a`) — the Release GA reads the message as the GitHub Release body
+- `auto-tag.yml` pushes an annotated tag whose message is only the version. The GitHub Release body is GitHub's automatically generated release notes (merged pull requests, contributors, full changelog) — do not write a changelog into the tag
 - Pushing a stable tag triggers two GAs automatically: `release.yml` creates the GitHub Release and `publish.yml` publishes to npm — no local publish step needed
 - Working tree must be clean before `bun pm version`
 
 ### Stable Release
 
-**Tag message format** — the Release GA uses the tag message verbatim as the GitHub Release body. Write it as:
-
-```
-v<x.y.z> — <one-line summary of the release>
-
-<one or two sentences describing the problem solved or the motivation>
-
-Changes:
-- <concrete change 1 — what was done and why it matters>
-- <concrete change 2>
-```
-
 ```bash
 bun pm version <x.y.z>
-# bun pm version creates an annotated tag automatically, but with no changelog.
-# Always delete and recreate it with a proper message before doing anything else:
+# bun pm version creates a local annotated tag. Delete it.
+# auto-tag.yml creates the published tag after this PR merges.
 git tag -d v<x.y.z>
-git tag -a v<x.y.z> -m "v<x.y.z> — <summary>
-
-<motivation paragraph>
-
-Changes:
-- change 1
-- change 2"
 
 git checkout -b release/v<x.y.z>
 git push -u origin release/v<x.y.z>
@@ -186,9 +167,8 @@ gh pr create --title "chore: release v<x.y.z>" --body "..."
 gh pr merge <number> --merge --auto
 git checkout main && git pull
 
-# auto-tag.yml pushes the tag automatically after merge
-# Tag message is AI-generated from the commit log
-# To override: delete the auto-created tag, recreate manually, and force-push
+# auto-tag.yml pushes v<x.y.z> — no manual git push origin v<x.y.z>
+# release.yml fills the GitHub Release with automatically generated notes
 ```
 
 ### RC / Pre-release
