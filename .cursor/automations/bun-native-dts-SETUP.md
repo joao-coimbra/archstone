@@ -2,18 +2,32 @@
 
 Cloud Automations run on Cursor’s servers — your laptop can be off.
 
-## Create (dashboard)
+A Cloud Agent **cannot** create Automations via MCP alone. Use one of:
+
+## A) Local Cursor — `/automate` (simplest)
+
+In a **local** Agent on this repo, run `/automate` and ask it to create a weekly cron automation using [`bun-native-dts-PROMPT.body.md`](./bun-native-dts-PROMPT.body.md). Approve the draft and save in the Automations editor.
+
+## B) Dashboard UI
 
 1. Open https://cursor.com/automations/new
 2. **Name:** `bun-native-dts-migration`
 3. **Trigger:** Scheduled → cron `0 15 * * 1` (Mondays 12:00 America/Sao_Paulo)
-4. **Repository:** `joao-coimbra/archstone` (single repo), branch `main` (or the prep branch until #71 merges)
+4. **Repository:** `joao-coimbra/archstone`, branch `main`
 5. **Tools:** enable pull request creation
-6. **Prompt:** paste the body from [`bun-native-dts-PROMPT.md`](./bun-native-dts-PROMPT.md) (everything under the horizontal rule)
+6. **Prompt:** paste [`bun-native-dts-PROMPT.body.md`](./bun-native-dts-PROMPT.body.md)
 7. Save and activate
+
+## C) Terraform (for the Cloud Agent to apply)
+
+Needs env `CURSOR_TOKEN` = team/user API key that can manage Automations.
+
+```bash
+cd .cursor/automations/terraform
+terraform init
+terraform apply
+```
 
 ## Stop when done
 
-Agents cannot flip the automation off via API. The prompt ends with `BUN_NATIVE_DTS_DONE` when migration is finished or already applied — then disable the automation on its detail page in the dashboard (or destroy the Terraform resource if you manage it that way).
-
-Until then, failed weeks are a one-line status only.
+When migration is finished the agent replies `BUN_NATIVE_DTS_DONE` and no-ops later runs. Then disable the automation in the dashboard (or `terraform destroy`).
