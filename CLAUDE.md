@@ -67,13 +67,14 @@ src/
 
 Use **Bun 1.4** exclusively — never Node.js, npm, yarn, or pnpm. The repo pins `packageManager` to `bun@1.4.5`.
 
-Library builds still use **bunup** because stable Bun does not yet emit `.d.ts` for multi-entry packages. Do not remove bunup until `bun run probe:native-dts` exits 0 on a stable Bun release.
+Library builds still use **bunup** because stable Bun does not yet emit `.d.ts` for multi-entry packages. Do not remove bunup until `bun run probe:native-dts` exits 0 on a stable Bun release. The cutover target is `bun run build:native` (`scripts/build-native.ts`).
 
 | Task | Command |
 |------|---------|
 | Install dependencies | `bun install` |
 | Run tests | `bun test` |
 | Build | `bun run build` |
+| Native build (gated) | `bun run build:native` |
 | Lint & format | `bun x ultracite fix` |
 | Native dts readiness | `bun run probe:native-dts` |
 | Publish | `bun run release` |

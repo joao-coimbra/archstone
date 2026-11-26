@@ -80,6 +80,7 @@
   },
   "scripts": {
     "build": "bunup",
+    "build:native": "bun scripts/build-native.ts",
     "dev": "bunup --watch",
     "test": "bun test",
     "check": "ultracite check",

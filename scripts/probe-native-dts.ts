@@ -4,6 +4,14 @@
  *
  * Exit 0 only when every migration gate passes. Until then, keep bunup.
  *
+ * Known blockers as of Bun 1.4.5 / 1.4.6-canary:
+ * - Stable ignores `dts: true` (JS only).
+ * - Canary lists `--dts` as experimental for 1.5 and panics on this
+ *   package with "too little stack for a task" even for a single entry.
+ *
+ * When this exits 0: switch `package.json` build scripts to
+ * `build:native`, remove bunup + bunup.config.ts, and re-pin Bun.
+ *
  * Usage: bun scripts/probe-native-dts.ts
  */
 
