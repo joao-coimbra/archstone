@@ -1,21 +1,8 @@
 {
   "name": "archstone",
   "version": "1.5.4",
+  "private": false,
   "description": "TypeScript architecture foundation for backend services based on Domain-Driven Design and Clean Architecture",
-  "type": "module",
-  "license": "MIT",
-  "author": {
-    "name": "João Henrique Benatti Coimbra",
-    "url": "https://github.com/joao-coimbra"
-  },
-  "homepage": "https://github.com/joao-coimbra/archstone#readme",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/joao-coimbra/archstone.git"
-  },
-  "bugs": {
-    "url": "https://github.com/joao-coimbra/archstone/issues"
-  },
   "keywords": [
     "ddd",
     "domain-driven-design",
@@ -30,12 +17,20 @@
     "use-case",
     "bun"
   ],
-  "files": [
-    "dist",
-    "README.md"
-  ],
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "homepage": "https://github.com/joao-coimbra/archstone#readme",
+  "bugs": {
+    "url": "https://github.com/joao-coimbra/archstone/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joao-coimbra/archstone.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "João Henrique Benatti Coimbra",
+    "url": "https://github.com/joao-coimbra"
+  },
+  "type": "module",
   "exports": {
     ".": {
       "import": {
@@ -69,32 +64,37 @@
     },
     "./package.json": "./package.json"
   },
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org/",
-    "access": "public"
-  },
-  "private": false,
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "bunup",
-    "dev": "bunup --watch",
-    "test": "bun test",
     "check": "ultracite check",
+    "dev": "bunup --watch",
     "fix": "ultracite fix",
-    "release": "bun publish --access public",
+    "prepare": "lefthook install",
     "prepublishOnly": "bun run build",
-    "prepare": "bunx husky"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+    "release": "bun publish --access public",
+    "test": "bun test"
   },
   "dependencies": {
     "failcraft": "^1.4.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.5",
+    "@biomejs/biome": "2.6.8",
     "@types/bun": "latest",
     "bunup": "^0.16.31",
-    "husky": "^9.1.7",
-    "ultracite": "7.3.0"
+    "lefthook": "^2.2.4",
+    "ultracite": "8.3.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   }
 }

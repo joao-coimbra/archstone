@@ -1,6 +1,13 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "extends": ["ultracite/biome/core"],
+  "extends": [
+    "ultracite/biome/core",
+    "ultracite/biome/type-aware",
+    "ultracite/biome/vitest"
+  ],
+  "files": {
+    "includes": ["!!**/.agents"]
+  },
   "linter": {
     "rules": {
       "performance": {
@@ -9,6 +16,13 @@
       "correctness": {
         "noUnresolvedImports": "off",
         "useImportExtensions": "off"
+      },
+      "style": {
+        // Public contracts and the DomainEvents bivariance hack rely on
+        // method-style signatures; property style would break both.
+        "useConsistentMethodSignatures": "off",
+        // WatchedList.compareItems implementations compare arguments only.
+        "useThisInClassMethods": "off"
       }
     }
   },
@@ -23,5 +37,20 @@
     "formatter": {
       "semicolons": "asNeeded"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "**/*.{test,spec,test-d,spec-d}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}",
+        "**/__tests__/**/*"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noExcessiveClassesPerFile": "off"
+          }
+        }
+      }
+    }
+  ]
 }
