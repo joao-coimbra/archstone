@@ -21,6 +21,18 @@ import { $ } from "bun"
 const pkgPath = "package.json"
 const workflowDir = ".github/workflows"
 
+const BUN_VERSION_LINE = /bun-version:\s*[\w.-]+/g
+const CLAUDE_BUN_PIN = /Use \*\*Bun [\d.]+(?:\+)?\*\* exclusively[^\n]*/
+const CLAUDE_BUNUP_NOTE = /Library builds still use \*\*bunup\*\*[^\n]*\n\n/
+const CLAUDE_NATIVE_BUILD_ROW =
+  /\| Native build \(gated\) \| `bun run build:native` \|\n/
+const CLAUDE_PROBE_ROW =
+  /\| Native dts readiness \| `bun run probe:native-dts` \|\n/
+const README_RUNTIME_ROW =
+  /\| \*\*Runtime \/ Package Manager\*\* \| \[Bun\]\(https:\/\/bun\.sh\) [^\n]+/
+const README_BUILD_TOOL_ROW = /\| \*\*Build Tool\*\* \| \[bunup\]\([^)]+\) \|/
+const README_REQUIREMENTS = /Requirements: \*\*Bun >= [^\n]+/
+
 function omitKey(
   record: Record<string, unknown>,
   key: string
@@ -35,7 +47,6 @@ function omitKey(
 }
 
 async function pinWorkflowBunVersion(version: string): Promise<number> {
-  const bunVersionLine = /bun-version:\s*[\w.-]+/g
   let updated = 0
   for (const name of await readdir(workflowDir)) {
     if (!(name.endsWith(".yml") || name.endsWith(".yaml"))) {
@@ -43,7 +54,7 @@ async function pinWorkflowBunVersion(version: string): Promise<number> {
     }
     const path = join(workflowDir, name)
     const original = await readFile(path, "utf8")
-    const next = original.replace(bunVersionLine, `bun-version: ${version}`)
+    const next = original.replace(BUN_VERSION_LINE, `bun-version: ${version}`)
     if (next !== original) {
       await writeFile(path, next)
       updated += 1
@@ -57,16 +68,16 @@ async function rewritePostCutoverDocs(version: string): Promise<void> {
   const claude = await readFile(claudePath, "utf8")
   const nextClaude = claude
     .replace(
-      /Use \*\*Bun [\d.]+(?:\+)?\*\* exclusively[^\n]*/,
+      CLAUDE_BUN_PIN,
       `Use **Bun ${version}** exclusively — never Node.js, npm, yarn, or pnpm. The repo pins \`packageManager\` to \`bun@${version}\`.`
     )
     .replace(
-      /Library builds still use \*\*bunup\*\*[^\n]*\n\n/,
+      CLAUDE_BUNUP_NOTE,
       "Library builds use native `bun build --dts` via `scripts/build-native.ts` (with `rewrite-dts-aliases` for `@/` → relative imports).\n\n"
     )
-    .replace(/\| Native build \(gated\) \| `bun run build:native` \|\n/, "")
+    .replace(CLAUDE_NATIVE_BUILD_ROW, "")
     .replace(
-      /\| Native dts readiness \| `bun run probe:native-dts` \|\n/,
+      CLAUDE_PROBE_ROW,
       "| Native dts regression probe | `bun run probe:native-dts` |\n"
     )
   await writeFile(claudePath, nextClaude)
@@ -75,17 +86,14 @@ async function rewritePostCutoverDocs(version: string): Promise<void> {
   const readme = await readFile(readmePath, "utf8")
   const nextReadme = readme
     .replace(
-      /\| \*\*Runtime \/ Package Manager\*\* \| \[Bun\]\(https:\/\/bun\.sh\) [^\n]+/,
+      README_RUNTIME_ROW,
       `| **Runtime / Package Manager** | [Bun](https://bun.sh) ${version} (required) |`
     )
     .replace(
-      /\| \*\*Build Tool\*\* \| \[bunup\]\([^)]+\) \|/,
+      README_BUILD_TOOL_ROW,
       "| **Build Tool** | Native `bun build --dts` |"
     )
-    .replace(
-      /Requirements: \*\*Bun >= [^\n]+/,
-      `Requirements: **Bun >= ${version}**`
-    )
+    .replace(README_REQUIREMENTS, `Requirements: **Bun >= ${version}**`)
   await writeFile(readmePath, nextReadme)
 }
 
