@@ -5,7 +5,7 @@
   "type": "module",
   "license": "MIT",
   "author": {
-    "name": "João Henrique Benatti Coimbra",
+    "name": "Jo\u00e3o Henrique Benatti Coimbra",
     "url": "https://github.com/joao-coimbra"
   },
   "homepage": "https://github.com/joao-coimbra/archstone#readme",
@@ -86,7 +86,6 @@
     "check": "ultracite check",
     "fix": "ultracite fix",
     "probe:native-dts": "bun scripts/probe-native-dts.ts",
-    "cutover:native-dts": "bun scripts/cutover-native-dts.ts",
     "release": "bun publish --access public",
     "prepublishOnly": "bun run build",
     "prepare": "bunx husky"

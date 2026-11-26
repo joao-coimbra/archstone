@@ -8,7 +8,8 @@
  * After emit, rewrites `@/` aliases in `.d.ts` to relative `.js` imports so
  * npm consumers can resolve types (Bun does not rewrite them yet).
  *
- * Keep `bun run build` on bunup until `bun run probe:native-dts` exits 0.
+ * Keep `bun run build` on bunup until `bun run probe:native-dts` exits 0 on
+ * a stable Bun release; then an agent cutover should make this the real build.
  *
  * Usage: bun scripts/build-native.ts [--watch]
  */

@@ -18,8 +18,9 @@
  * - Canary CLI may emit `@/` path aliases inside `.d.ts`; `rewriteDtsAliases`
  *   converts them to relative imports (same job bunup does today).
  *
- * When this exits 0: run `bun run cutover:native-dts` (or point `build`/`dev`
- * at the native script and remove bunup + bunup.config.ts), re-pin Bun, PR.
+ * When this exits 0 on npm `bun@latest`: an agent should migrate normally —
+ * point `build`/`dev` at `scripts/build-native.ts`, remove bunup +
+ * bunup.config.ts + dual scripts, pin Bun, scrub docs, open a PR.
  *
  * Usage: bun scripts/probe-native-dts.ts
  */
