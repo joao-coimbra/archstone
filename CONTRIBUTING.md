@@ -64,14 +64,14 @@ Formatter defaults: no semicolons, 2-space indent, double quotes.
 
 Follows [Conventional Commits](https://www.conventionalcommits.org/):
 
-| Type | When to use |
-|------|-------------|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `chore` | Tooling or config |
-| `docs` | Documentation only |
+| Type       | When to use        |
+| ---------- | ------------------ |
+| `feat`     | New feature        |
+| `fix`      | Bug fix            |
+| `chore`    | Tooling or config  |
+| `docs`     | Documentation only |
 | `refactor` | No behavior change |
-| `test` | Tests only |
+| `test`     | Tests only         |
 
 ## Pull Request Process
 

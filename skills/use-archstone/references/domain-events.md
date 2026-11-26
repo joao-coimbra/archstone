@@ -8,16 +8,34 @@
 - Call `setupSubscriptions()` in the constructor — just instantiate the handler in the composition root
 - Dispatch via `DomainEvents.dispatchEventsForAggregate(aggregate.id)` — argument is `UniqueEntityId`
 - `clearEvents()` is called internally by `dispatchEventsForAggregate` — do not call manually
-- Test isolation: call `DomainEvents.clearHandlers()` and `DomainEvents.clearMarkedAggregates()` in `beforeEach`
+- Test isolation: `DomainEvents.clearHandlers()`, `DomainEvents.clearMarkedAggregates()`, and reset `DomainEvents.shouldRun = true`
+- Set `DomainEvents.shouldRun = false` to suppress dispatch without clearing handlers
+
+## DomainEvent shape
+
+```ts
+import type { DomainEvent, UniqueEntityId } from "archstone/core"
+
+class UserCreatedEvent implements DomainEvent {
+  occurredAt = new Date()
+  constructor(public readonly user: User) {}
+  getAggregateId(): UniqueEntityId {
+    return this.user.id
+  }
+}
+```
 
 ## Raising Events (inside aggregate)
 
 ```ts
 class User extends AggregateRoot<UserProps> {
-  static create(props: Optional<UserProps, 'createdAt'>, id?: UniqueEntityId): User {
+  static create(
+    props: Optional<UserProps, "createdAt">,
+    id?: UniqueEntityId
+  ): User {
     const user = new User(
       { ...props, createdAt: props.createdAt ?? new Date() },
-      id ?? new UniqueEntityId(),
+      id ?? new UniqueEntityId()
     )
     user.addDomainEvent(new UserCreatedEvent(user))
     return user
@@ -28,8 +46,8 @@ class User extends AggregateRoot<UserProps> {
 ## Defining a Handler
 
 ```ts
-import type { EventHandler } from 'archstone/core'
-import { DomainEvents } from 'archstone/core'
+import type { EventHandler } from "archstone/core"
+import { DomainEvents } from "archstone/core"
 
 class OnUserCreated implements EventHandler<UserCreatedEvent> {
   constructor(private readonly mailer: Mailer) {
@@ -37,10 +55,7 @@ class OnUserCreated implements EventHandler<UserCreatedEvent> {
   }
 
   setupSubscriptions(): void {
-    DomainEvents.register(
-      this.handle.bind(this),
-      UserCreatedEvent.name,
-    )
+    DomainEvents.register(this.handle.bind(this), UserCreatedEvent.name)
   }
 
   async handle(event: UserCreatedEvent): Promise<void> {
@@ -77,4 +92,7 @@ DomainEvents.dispatchEventsForAggregate(user.id.toValue()) // use UniqueEntityId
 
 // ❌ calling clearEvents() manually
 user.clearEvents() // dispatchEventsForAggregate handles this
+
+// ❌ importing from enterprise (deprecated, non-generic EventHandler)
+import { EventHandler } from "archstone/domain/enterprise"
 ```
