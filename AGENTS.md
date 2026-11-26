@@ -124,12 +124,12 @@ Use in-memory repository implementations for use case tests — never couple tes
 
 ## Merge Procedure
 
-- Always merge pull requests using **Squash and Merge** (`--squash`)
+- Always merge pull requests with a merge commit (`--merge`)
 - Never `--delete-branch` — the repo auto-deletes merged branches
 - Always sync main after merge
 
 ```bash
-gh pr merge <number> --squash
+gh pr merge <number> --merge
 git checkout main && git pull
 ```
 
@@ -140,7 +140,7 @@ git checkout -b <type>/<name>
 # ... commits ...
 git push -u origin <type>/<name>
 gh pr create --title "<title>" --body "<body>"
-gh pr merge <number> --squash
+gh pr merge <number> --merge
 git checkout main && git pull
 ```
 
@@ -183,7 +183,7 @@ Changes:
 git checkout -b release/v<x.y.z>
 git push -u origin release/v<x.y.z>
 gh pr create --title "chore: release v<x.y.z>" --body "..."
-gh pr merge <number> --squash --auto
+gh pr merge <number> --merge --auto
 git checkout main && git pull
 
 # auto-tag.yml pushes the tag automatically after merge
