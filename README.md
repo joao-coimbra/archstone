@@ -15,7 +15,7 @@ Build on Domain-Driven Design and Clean Architecture — without writing the sam
 [![npm version](https://img.shields.io/npm/v/archstone?style=for-the-badge&logo=npm&color=CB3837&logoColor=white)](https://www.npmjs.com/package/archstone)
 [![license](https://img.shields.io/badge/license-MIT-22C55E?style=for-the-badge)](./LICENSE)
 [![typescript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![bun](https://img.shields.io/badge/Bun-ready-F9F1E1?style=for-the-badge&logo=bun&logoColor=black)](https://bun.sh)
+[![bun](https://img.shields.io/badge/Bun-1.4-F9F1E1?style=for-the-badge&logo=bun&logoColor=black)](https://bun.sh)
 
 <br>
 
@@ -309,7 +309,7 @@ src/
 |                               |                                                                                     |
 | ----------------------------- | ----------------------------------------------------------------------------------- |
 | **Language**                  | TypeScript 5+                                                                       |
-| **Runtime / Package Manager** | [Bun](https://bun.sh) (required)                                                    |
+| **Runtime / Package Manager** | [Bun](https://bun.sh) 1.4 (required)                                                |
 | **Test Framework**            | `bun:test` (built-in)                                                               |
 | **Build Tool**                | [bunup](https://github.com/nicepkg/bunup)                                           |
 | **Linter / Formatter**        | [Biome](https://biomejs.dev) via [Ultracite](https://ultracite.dev)                 |
@@ -319,7 +319,7 @@ src/
 
 ## Development Workflow
 
-Requirements: **Bun >= 1.0**
+Requirements: **Bun >= 1.4**
 
 ```bash
 bun install          # install dev dependencies

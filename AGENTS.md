@@ -77,7 +77,7 @@ src/
 
 ## Runtime & Tooling
 
-Use **Bun** exclusively — never Node.js, npm, yarn, or pnpm.
+Use **Bun 1.4** exclusively — never Node.js, npm, yarn, or pnpm. The repo pins `packageManager` to `bun@1.4.5`.
 
 | Task                 | Command                              |
 | -------------------- | ------------------------------------ |

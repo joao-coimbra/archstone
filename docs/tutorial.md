@@ -10,7 +10,7 @@ This tutorial walks you through building a complete backend feature — register
 
 **Prerequisites:**
 
-- [Bun](https://bun.sh) >= 1.0 installed
+- [Bun](https://bun.sh) >= 1.4 installed
 - Basic TypeScript familiarity
 - Archstone installed in your project:
 
