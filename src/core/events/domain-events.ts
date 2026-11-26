@@ -46,7 +46,7 @@ class DomainEventsImplementation {
    *
    * @default true
    */
-  shouldRun = true
+  shouldRun = true as boolean
 
   /**
    * Marks an aggregate root to have its events dispatched.

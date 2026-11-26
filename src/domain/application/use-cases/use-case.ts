@@ -34,8 +34,8 @@ type UseCaseOutput = Either<UseCaseError | never, unknown> | Maybe<unknown>
  *
  *   async execute({ userId }: Input): Promise<Output> {
  *     const user = await this.userRepository.findById(userId)
- *     if (!user) return left(new UserNotFoundError(userId))
- *     return right(user)
+ *     if (user.isNothing()) return left(new UserNotFoundError(userId))
+ *     return right(user.value)
  *   }
  * }
  * ```
