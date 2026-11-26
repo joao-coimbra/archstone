@@ -36,25 +36,12 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Generate tag message
-        id: notes
-        if: steps.check.outputs.skip == 'false'
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          VERSION: ${{ steps.check.outputs.version }}
-        run: bash .github/scripts/generate-tag-message.sh
-
       - name: Create and push annotated tag
         if: steps.check.outputs.skip == 'false'
         env:
           VERSION: ${{ steps.check.outputs.version }}
-          TAG_MESSAGE: ${{ steps.notes.outputs.message }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if [ -n "$TAG_MESSAGE" ]; then
-            git tag -a "v$VERSION" -m "${TAG_MESSAGE}"
-          else
-            git tag "v$VERSION"
-          fi
+          git tag -a "v$VERSION" -m "v$VERSION"
           git push origin "v$VERSION"
