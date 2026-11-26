@@ -18,6 +18,25 @@ The library is published to npm as `archstone` and exposes four entry points:
 - Test git hooks with `bunx lefthook run pre-commit`
 - When creating several PRs at once, stack them so each branch starts from the previous one — not all from `main`
 
+### Keep `skills/use-archstone` in sync
+
+`skills/use-archstone/` is the consumer-facing agent skill (installed via `bun x skills add joao-coimbra/archstone`). It must stay accurate against the public API.
+
+**When to update it (required in the same PR):**
+
+- Public exports or signatures change under `src/core`, `src/domain/enterprise`, or `src/domain/application`
+- Import paths, layer rules, or recommended patterns in `AGENTS.md` change for consumers
+- New primitives ship that consumers should use (`Maybe`, `attempt`, `shouldRun`, etc.)
+- Examples in JSDoc or README would lead an agent to generate wrong code
+
+**What to update:**
+
+1. `skills/use-archstone/SKILL.md` — critical rules + triggers
+2. Matching files under `skills/use-archstone/references/`
+3. Keep `.agents/skills/use-archstone` as a symlink to that folder (do not duplicate content)
+
+**Do not** ship an API change that agents would misuse without updating the skill in the same change.
+
 ```bash
 git checkout -b pr-1 && git add <files> && git commit && git push
 gh pr create --head pr-1 --base main
@@ -216,8 +235,9 @@ Nothing in this layer may import from `domain/`.
 
 - Use `right(value)` / `left(error)`; never throw inside a use case
 - `DomainEvents.dispatchEventsForAggregate()` takes a `UniqueEntityId` — never `.toValue()`
-- `Findable.findById()` takes a `string` — pass `id.toValue()`; returns `Promise<Maybe<T>>`
-- In tests: `DomainEvents.clearHandlers()` and `DomainEvents.clearMarkedAggregates()` to isolate state
+- `Findable.findById()` takes a `string` — pass `id.toValue()`; returns `Promise<Maybe<T>>` — use `.isNothing()` / `.value`
+- Import `DomainEvent` / `DomainEvents` / `EventHandler<T>` from `archstone/core`
+- In tests: `DomainEvents.clearHandlers()`, `clearMarkedAggregates()`, reset `shouldRun = true`
 - Set `DomainEvents.shouldRun = false` to suppress dispatch without clearing handlers
 
 ---
@@ -246,9 +266,10 @@ Never import from infrastructure. Only imports from `core/` and `domain/enterpri
 - Every use case implements `UseCase<Input, Output>` and returns `Either` — never throws
 - Error classes **implement** `UseCaseError` — they do not extend `Error`
 - Define repositories as interfaces only; compose `Findable` / `Creatable` / `Saveable` / `Deletable` / `Repository`
-- `Findable.findById()` takes a plain `string` and returns `Promise<Maybe<T>>`
+- `Findable.findById()` takes a plain `string` and returns `Promise<Maybe<T>>` — never treat as `T | null`
 - `Deletable.delete()` takes the **full entity**, not an id
 - Inject repositories via constructor; never instantiate implementations inside a use case
+- Keep `skills/use-archstone` updated whenever these contracts change (see Agent notes)
 
 ---
 

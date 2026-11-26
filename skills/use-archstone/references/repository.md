@@ -4,10 +4,10 @@
 
 - Contracts are **interfaces only** — never place implementations in `domain/`
 - Extend `Repository<T>` for full CRUD, or compose granular interfaces:
-  - `Findable<T>` — `findById(id: string)` — takes `string`, not `UniqueEntityId`
-  - `Creatable<T>` — `create(entity: T)`
-  - `Saveable<T>` — `save(entity: T)`
-  - `Deletable<T>` — `delete(entity: T)` — takes full entity, not an id
+  - `Findable<T>` — `findById(id: string): Promise<Maybe<T>>`
+  - `Creatable<T>` — `create(entity: T): Promise<void>`
+  - `Saveable<T>` — `save(entity: T): Promise<void>`
+  - `Deletable<T>` — `delete(entity: T): Promise<void>` — takes full entity, not an id
 - Import via barrel: `archstone/domain/application`
 - Implementations belong in infrastructure
 - Inject as the **interface type** in use cases
@@ -17,7 +17,7 @@
 ```ts
 import type { Repository, Creatable } from "archstone/domain/application"
 
-// Full CRUD + custom method
+// Full CRUD + custom method (custom methods may return T | null)
 export interface UserRepository extends Repository<User> {
   findByEmail(email: string): Promise<User | null>
 }
@@ -29,11 +29,14 @@ export interface AuditRepository extends Creatable<AuditLog> {}
 ## In-Memory Implementation (for tests)
 
 ```ts
+import { just, nothing } from "archstone/core"
+
 export class InMemoryUserRepository implements UserRepository {
   public items: User[] = []
 
   async findById(id: string) {
-    return this.items.find((u) => u.id.toValue() === id) ?? null
+    const user = this.items.find((u) => u.id.toValue() === id)
+    return user ? just(user) : nothing()
   }
 
   async findByEmail(email: string) {
@@ -62,6 +65,11 @@ export class InMemoryUserRepository implements UserRepository {
 constructor(private repo: PrismaUserRepository) {}
 
 // ❌ UniqueEntityId to findById
-await repo.findById(user.id)           // wrong
+await repo.findById(user.id) // wrong
 await repo.findById(user.id.toValue()) // correct
+
+// ❌ treating Maybe as nullable
+const user = await repo.findById(id)
+if (!user) {
+} // always false — use user.isNothing()
 ```

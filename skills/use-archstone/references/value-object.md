@@ -3,7 +3,9 @@
 ## Rules
 
 - Extend `ValueObject<Props>`
-- Static `create()` factory with validation — may throw on invalid input (intentional)
+- Static `create()` factory with validation
+- Prefer returning `Either<Error, ValueObject>` when callers must handle failure explicitly
+- If `create()` throws, wrap with `attempt()` (or `try/catch`) inside use cases and return `left()`
 - Never mutate `this.props` — return a new instance instead
 - Compare with `.equals()` — never `===`
 
@@ -37,17 +39,14 @@ const b = Email.create("user@example.com")
 a.equals(b) // true
 ```
 
-## Handling throws in use cases
-
-Since `create()` may throw, wrap it inside use cases:
+## Handling validation in use cases
 
 ```ts
-try {
-  const email = Email.create(rawEmail)
-  user.updateEmail(email)
-} catch {
-  return left(new InvalidEmailError())
-}
+import { attempt, left } from "archstone/core"
+
+const emailResult = attempt(() => Email.create(rawEmail))
+if (emailResult.isLeft()) return left(new InvalidEmailError())
+user.updateEmail(emailResult.value)
 ```
 
 ## Common Mistakes
