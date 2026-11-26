@@ -1,3 +1,257 @@
+# Archstone — AI Instructions
+
+## Project Overview
+
+Archstone is a **zero-dependency TypeScript library** that provides the architectural foundation for backend services based on Domain-Driven Design (DDD) and Clean Architecture. It ships reusable base classes, contracts, and utilities so consumer projects never write this boilerplate themselves.
+
+The library is published to npm as `archstone` and exposes four entry points:
+
+| Entry point                    | Layer                   |
+| ------------------------------ | ----------------------- |
+| `archstone`                    | re-exports everything   |
+| `archstone/core`               | pure language utilities |
+| `archstone/domain/enterprise`  | domain model primitives |
+| `archstone/domain/application` | orchestration contracts |
+
+### Agent notes
+
+- Test the pre-commit hook with `sh .husky/pre-commit`, not `bun x husky`
+- When creating several PRs at once, stack them so each branch starts from the previous one — not all from `main`
+
+```bash
+git checkout -b pr-1 && git add <files> && git commit && git push
+gh pr create --head pr-1 --base main
+
+git checkout -b pr-2 && git add <files> && git commit && git push
+gh pr create --head pr-2 --base pr-1
+```
+
+Only stack when PRs are sequential and independent. If they touch the same files, resolve that before splitting.
+
+## Logical Architecture
+
+Three layers, each with a strict dependency rule — inner layers never import outer ones:
+
+```
+┌─────────────────────────────────────────┐
+│  infrastructure  (not in this repo)     │ ← database adapters, HTTP handlers
+├─────────────────────────────────────────┤
+│  domain / application                   │ ← use cases, repository interfaces
+├─────────────────────────────────────────┤
+│  domain / enterprise                    │ ← entities, aggregates, value objects
+├─────────────────────────────────────────┤
+│  core                                   │ ← Either, Maybe, ValueObject, UniqueEntityId…
+└─────────────────────────────────────────┘
+```
+
+Infrastructure implementations (database adapters, HTTP handlers) live outside this library — never add them here.
+
+## Source Structure
+
+```
+src/
+  core/                 ← pure language utilities (see Core Layer below)
+  domain/
+    enterprise/         ← domain model (see Domain / Enterprise below)
+    application/        ← use cases & repo contracts (see Domain / Application below)
+```
+
+## Runtime & Tooling
+
+Use **Bun** exclusively — never Node.js, npm, yarn, or pnpm.
+
+| Task                 | Command                              |
+| -------------------- | ------------------------------------ |
+| Install dependencies | `bun install`                        |
+| Run tests            | `bun test`                           |
+| Build                | `bun run build`                      |
+| Lint & format        | `bun x ultracite fix`                |
+| Publish              | `bun run release`                    |
+| Bump version         | `bun pm version patch\|minor\|major` |
+
+## Path Aliases & Import Rules
+
+`@/` resolves to `src/`. Always import from the **layer's index**, never from deep file paths — deep imports cause the dts bundler to inline type declarations and break TypeScript's nominal typing for consumers who mix sub-path imports.
+
+```ts
+// ✅ correct
+import { Either } from "@/core/index"
+import { Entity } from "@/domain/enterprise/index"
+
+// ❌ wrong — deep path breaks dts bundling
+import { ValueObject } from "@/core/value-object"
+```
+
+## Testing
+
+Framework: `bun:test`. Test files are `*.spec.ts` co-located with their source file.
+
+```ts
+import { test, expect } from "bun:test"
+
+test("example", () => {
+  expect(1).toBe(1)
+})
+```
+
+Use in-memory repository implementations for use case tests — never couple tests to a real database.
+
+## Contributing Workflow
+
+- Branch naming: `feat/<name>`, `fix/<name>`, `docs/<name>`, `chore/<name>`
+- Commit style: Conventional Commits (`feat`, `fix`, `chore`, `docs`, `refactor`, `test`)
+- Every commit must pass `bun test` and `bun x ultracite fix` before pushing
+- See [CONTRIBUTING.md](./CONTRIBUTING.md) for full guidelines
+
+## Merge Procedure
+
+- Always merge pull requests using **Squash and Merge** (`--squash`)
+- Never `--delete-branch` — the repo auto-deletes merged branches
+- Always sync main after merge
+
+```bash
+gh pr merge <number> --squash
+git checkout main && git pull
+```
+
+### Branch Full Flow
+
+```bash
+git checkout -b <type>/<name>
+# ... commits ...
+git push -u origin <type>/<name>
+gh pr create --title "<title>" --body "<body>"
+gh pr merge <number> --squash
+git checkout main && git pull
+```
+
+## Release Procedure
+
+- Stable tags are created automatically by `auto-tag.yml` when `package.json` changes on `main` — do NOT push tags manually after a release PR merges
+- Never `git push --tags` — pushes all local tags including unintended ones
+- Never create git tags for RC versions — tag only stable releases
+- Always use annotated tags (`-a`) — the Release GA reads the message as the GitHub Release body
+- Pushing a stable tag triggers two GAs automatically: `release.yml` creates the GitHub Release and `publish.yml` publishes to npm — no local publish step needed
+- Working tree must be clean before `bun pm version`
+
+### Stable Release
+
+**Tag message format** — the Release GA uses the tag message verbatim as the GitHub Release body. Write it as:
+
+```
+v<x.y.z> — <one-line summary of the release>
+
+<one or two sentences describing the problem solved or the motivation>
+
+Changes:
+- <concrete change 1 — what was done and why it matters>
+- <concrete change 2>
+```
+
+```bash
+bun pm version <x.y.z>
+# bun pm version creates an annotated tag automatically, but with no changelog.
+# Always delete and recreate it with a proper message before doing anything else:
+git tag -d v<x.y.z>
+git tag -a v<x.y.z> -m "v<x.y.z> — <summary>
+
+<motivation paragraph>
+
+Changes:
+- change 1
+- change 2"
+
+git checkout -b release/v<x.y.z>
+git push -u origin release/v<x.y.z>
+gh pr create --title "chore: release v<x.y.z>" --body "..."
+gh pr merge <number> --squash --auto
+git checkout main && git pull
+
+# auto-tag.yml pushes the tag automatically after merge
+# Tag message is AI-generated from the commit log
+# To override: delete the auto-created tag, recreate manually, and force-push
+```
+
+### RC / Pre-release
+
+```bash
+bun pm version prerelease --preid rc
+bun run release --tag next
+# commit + push via PR — NO git tag for RCs
+```
+
+### dist-tags
+
+| Tag      | Use              |
+| -------- | ---------------- |
+| `latest` | stable releases  |
+| `next`   | RC / pre-release |
+
+## Agent Skills for Consumer Projects
+
+`skills/use-archstone/` ships with the package since v1.1.0:
+
+```bash
+bun x skills add joao-coimbra/archstone
+```
+
+---
+
+## Core Layer (`src/core`)
+
+**Responsibility:** Zero domain knowledge. Pure TypeScript utilities usable in any project.
+
+Nothing in this layer may import from `domain/`.
+
+| Export               | Purpose                                          |
+| -------------------- | ------------------------------------------------ |
+| `Either<L, R>`       | Discriminated union for type-safe error handling |
+| `ValueObject<Props>` | Immutable objects defined by attributes          |
+| `UniqueEntityId`     | UUID v7 wrapper for entity identity              |
+| `WatchedList<T>`     | Collection that tracks additions/removals        |
+| `DomainEvent`        | Marker interface for domain events               |
+| `DomainEvents`       | Central registry and dispatcher — singleton      |
+| `EventHandler<T>`    | Generic interface for side-effect handlers       |
+| `Optional<T, K>`     | Utility type to make specific props optional     |
+
+- Use `right(value)` / `left(error)`; never throw inside a use case
+- `DomainEvents.dispatchEventsForAggregate()` takes a `UniqueEntityId` — never `.toValue()`
+- `Findable.findById()` takes a `string` — pass `id.toValue()`; returns `Promise<Maybe<T>>`
+- In tests: `DomainEvents.clearHandlers()` and `DomainEvents.clearMarkedAggregates()` to isolate state
+- Set `DomainEvents.shouldRun = false` to suppress dispatch without clearing handlers
+
+---
+
+## Domain / Enterprise (`src/domain/enterprise`)
+
+**Responsibility:** Pure domain model. No framework, no infrastructure, no application logic.
+
+Never import from `domain/application/` or infrastructure. Only imports from `core/` are allowed.
+
+- Always provide a static `create()` factory — never expose the constructor
+- Use `Optional<Props, K>` for props with defaults
+- Raise events with `addDomainEvent()`; dispatch happens in infrastructure after persistence
+- Never call `clearEvents()` manually
+- Prefer `Either<Error, ValueObject>` from `create()` when callers must handle validation failure
+- Repository implementations, use case logic, and framework imports do **not** belong here
+
+---
+
+## Domain / Application (`src/domain/application`)
+
+**Responsibility:** Orchestration — use cases and repository contracts. No framework, no infrastructure.
+
+Never import from infrastructure. Only imports from `core/` and `domain/enterprise/` are allowed.
+
+- Every use case implements `UseCase<Input, Output>` and returns `Either` — never throws
+- Error classes **implement** `UseCaseError` — they do not extend `Error`
+- Define repositories as interfaces only; compose `Findable` / `Creatable` / `Saveable` / `Deletable` / `Repository`
+- `Findable.findById()` takes a plain `string` and returns `Promise<Maybe<T>>`
+- `Deletable.delete()` takes the **full entity**, not an id
+- Inject repositories via constructor; never instantiate implementations inside a use case
+
+---
+
 # Ultracite Code Standards
 
 This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
