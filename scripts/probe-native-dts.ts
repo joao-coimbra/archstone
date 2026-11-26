@@ -194,6 +194,47 @@ async function findMissingSubpaths(outdir: string): Promise<string[]> {
   return missing
 }
 
+function distRelative(specifier: string): string | null {
+  if (!specifier.startsWith("./dist/")) {
+    return null
+  }
+  return specifier.slice("./dist/".length)
+}
+
+async function findExportsMapGaps(outdir: string): Promise<string[]> {
+  const pkg = (await Bun.file("package.json").json()) as {
+    exports?: Record<string, unknown>
+  }
+  const gaps: string[] = []
+  for (const [subpath, value] of Object.entries(pkg.exports ?? {})) {
+    if (subpath === "./package.json" || typeof value !== "object" || !value) {
+      continue
+    }
+    const importMap = (
+      value as { import?: { types?: string; default?: string } }
+    ).import
+    if (!importMap) {
+      continue
+    }
+    for (const kind of ["types", "default"] as const) {
+      const target = importMap[kind]
+      if (!target) {
+        gaps.push(`${subpath} missing ${kind}`)
+        continue
+      }
+      const relative = distRelative(target)
+      if (!relative) {
+        gaps.push(`${subpath} ${kind} not under ./dist/: ${target}`)
+        continue
+      }
+      if (!(await Bun.file(join(outdir, relative)).exists())) {
+        gaps.push(`${subpath} → ${target} (missing after native build)`)
+      }
+    }
+  }
+  return gaps
+}
+
 async function findAliasLeaks(
   outdir: string,
   dtsFiles: string[]
@@ -313,6 +354,16 @@ async function main(): Promise<number> {
         : `missing .d.ts: ${missingSubpaths.join(", ") || "(none emitted)"}`
     )
 
+    const exportGaps =
+      dtsFiles.length > 0 ? await findExportsMapGaps(outdir) : ["no .d.ts emit"]
+    record(
+      "exports-map",
+      exportGaps.length === 0,
+      exportGaps.length === 0
+        ? "package.json exports types+default resolve after native build"
+        : exportGaps.slice(0, 6).join("; ")
+    )
+
     if (dtsFiles.length > 0) {
       await rewriteDtsAliases(outdir)
     }
@@ -325,6 +376,7 @@ async function main(): Promise<number> {
 
     const readyForSmoke =
       missingSubpaths.length === 0 &&
+      exportGaps.length === 0 &&
       dtsFiles.length > 0 &&
       aliasHits.length === 0
     if (readyForSmoke) {
