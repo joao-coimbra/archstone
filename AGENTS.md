@@ -15,7 +15,7 @@ The library is published to npm as `archstone` and exposes four entry points:
 
 ### Agent notes
 
-- Test the pre-commit hook with `sh .husky/pre-commit`, not `bun x husky`
+- Test git hooks with `bunx lefthook run pre-commit`
 - When creating several PRs at once, stack them so each branch starts from the previous one — not all from `main`
 
 ```bash
