@@ -27,7 +27,7 @@ Open a [GitHub Discussion](https://github.com/joao-coimbra/archstone/discussions
 
 ## Development Setup
 
-Requirements: **Bun >= 1.0**
+Requirements: **Bun >= 1.4**
 
 ```bash
 bun install

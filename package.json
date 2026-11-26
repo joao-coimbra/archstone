@@ -74,6 +74,10 @@
     "access": "public"
   },
   "private": false,
+  "packageManager": "bun@1.4.5",
+  "engines": {
+    "bun": ">=1.4.0"
+  },
   "scripts": {
     "build": "bunup",
     "dev": "bunup --watch",
@@ -92,7 +96,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.5",
-    "@types/bun": "latest",
+    "@types/bun": "1.4.5",
     "bunup": "^0.16.31",
     "husky": "^9.1.7",
     "ultracite": "7.3.0"
