@@ -67,7 +67,7 @@ src/
 
 Use **Bun 1.4** exclusively — never Node.js, npm, yarn, or pnpm. The repo pins `packageManager` to `bun@1.4.5`.
 
-Library builds still use **bunup** because stable Bun does not yet emit `.d.ts` (`bun build --dts` lands in 1.5). `bun run probe:native-dts` is the fail-closed readiness check; a daily agent checkup runs it and, only when every gate passes on npm `bun@latest`, migrates by hand (point `build`/`dev` at `scripts/build-native.ts`, remove `bunup` + `bunup.config.ts` + dual scripts, pin Bun, scrub docs, open a PR). Do not leave bunup installed after that cutover.
+Library builds still use **bunup** because stable Bun does not yet emit `.d.ts` (`bun build --dts` lands in 1.5). `bun run probe:native-dts` is the fail-closed readiness check. Schedule the Cursor Cloud Automation described in `.cursor/automations/bun-native-dts-SETUP.md` to run the probe weekly and migrate when ready (then disable the automation when it prints `BUN_NATIVE_DTS_DONE`). Do not leave bunup installed after that cutover.
 
 | Task | Command |
 |------|---------|
