@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": "bunx ultracite fix --skip=correctness/noUnusedImports --hook"
+      }
+    ]
+  },
+  "version": 1
+}
