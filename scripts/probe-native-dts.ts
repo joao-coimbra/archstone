@@ -75,115 +75,94 @@ async function collectDtsFiles(root: string): Promise<string[]> {
   return files
 }
 
-async function main(): Promise<number> {
-  console.log(`probe-native-dts — Bun ${Bun.version}\n`)
+async function runNativeBuild(outdir: string): Promise<boolean> {
+  const build =
+    await $`bun build ${ENTRYPOINTS} --outdir ${outdir} --root ./src --format esm --target bun --splitting --dts`
+      .quiet()
+      .nothrow()
 
-  const helpHasDts = await helpMentionsDts()
+  const buildOk = build.exitCode === 0
+  const failure =
+    build.stderr.toString().trim() ||
+    build.stdout.toString().trim() ||
+    `bun build --dts exited ${build.exitCode}`
   record(
-    "stable-cli-dts",
-    helpHasDts,
-    helpHasDts
-      ? "`bun build --help` lists --dts"
-      : "`bun build --help` does not list --dts (still missing or experimental-only)"
+    "multi-entry-build",
+    buildOk,
+    buildOk ? "bun build --dts succeeded" : failure.slice(0, 500)
   )
+  return buildOk
+}
 
-  const outdir = await mkdtemp(join(tmpdir(), "archstone-native-dts-"))
-  try {
-    const build =
-      await $`bun build ${ENTRYPOINTS} --outdir ${outdir} --root ./src --format esm --target bun --splitting --dts`
-        .quiet()
-        .nothrow()
-
-    const buildOk = build.exitCode === 0
-    record(
-      "multi-entry-build",
-      buildOk,
-      buildOk
-        ? "bun build --dts succeeded"
-        : (
-            build.stderr.toString().trim() ||
-            build.stdout.toString().trim() ||
-            `bun build --dts exited ${build.exitCode}`
-          ).slice(0, 500)
-    )
-
-    const dtsFiles = buildOk ? await collectDtsFiles(outdir) : []
-    record(
-      "dts-emitted",
-      dtsFiles.length > 0,
-      dtsFiles.length > 0
-        ? `emitted ${dtsFiles.length} .d.ts file(s)`
-        : "`--dts` produced no .d.ts (ignored or unsupported)"
-    )
-
-    const missingSubpaths: string[] = []
-    for (const relative of SUBPATH_DTS) {
-      if (!(await Bun.file(join(outdir, relative)).exists())) {
-        missingSubpaths.push(relative)
-      }
+async function findMissingSubpaths(outdir: string): Promise<string[]> {
+  const missing: string[] = []
+  for (const relative of SUBPATH_DTS) {
+    if (!(await Bun.file(join(outdir, relative)).exists())) {
+      missing.push(relative)
     }
-    record(
-      "subpath-dts",
-      missingSubpaths.length === 0 && dtsFiles.length > 0,
-      missingSubpaths.length === 0 && dtsFiles.length > 0
-        ? "all published subpaths have index.d.ts"
-        : `missing .d.ts: ${missingSubpaths.join(", ") || "(none emitted)"}`
-    )
+  }
+  return missing
+}
 
-    const aliasHits: string[] = []
-    for (const file of dtsFiles) {
-      const text = await Bun.file(file).text()
-      if (text.includes('"@/') || text.includes("'@/")) {
-        aliasHits.push(file.replace(`${outdir}/`, ""))
-      }
+async function findAliasLeaks(
+  outdir: string,
+  dtsFiles: string[]
+): Promise<string[]> {
+  const hits: string[] = []
+  for (const file of dtsFiles) {
+    const text = await Bun.file(file).text()
+    if (text.includes('"@/') || text.includes("'@/")) {
+      hits.push(file.replace(`${outdir}/`, ""))
     }
-    record(
-      "no-path-alias-leak",
-      dtsFiles.length > 0 && aliasHits.length === 0,
-      dtsFiles.length === 0
-        ? "skipped — no .d.ts to inspect"
-        : aliasHits.length === 0
-          ? "no `@/` imports in emitted .d.ts"
-          : "@/" still appears in: ${aliasHits.slice(0, 8).join(", ")}${aliasHits.length > 8 ? "…" : ""}`
-    )
+  }
+  return hits
+}
 
-    if (
-      missingSubpaths.length === 0 &&
-      dtsFiles.length > 0 &&
-      aliasHits.length === 0
-    ) {
-      const consumerDir = join(outdir, "consumer-smoke")
-      await mkdir(consumerDir, { recursive: true })
-      await writeFile(
-        join(consumerDir, "package.json"),
-        JSON.stringify({
-          name: "archstone-native-dts-smoke",
-          type: "module",
-          private: true,
-        })
-      )
-      await writeFile(
-        join(consumerDir, "tsconfig.json"),
-        JSON.stringify({
-          compilerOptions: {
-            module: "ESNext",
-            moduleResolution: "bundler",
-            strict: true,
-            noEmit: true,
-            skipLibCheck: false,
-            paths: {
-              "archstone/core": [join(outdir, "core/index.d.ts")],
-              "archstone/domain/enterprise": [
-                join(outdir, "domain/enterprise/index.d.ts"),
-              ],
-            },
-          },
-          include: ["./smoke.ts"],
-        })
-      )
-      await writeFile(
-        join(consumerDir, "smoke.ts"),
-        `
+function aliasLeakDetail(dtsCount: number, aliasHits: string[]): string {
+  if (dtsCount === 0) {
+    return "skipped — no .d.ts to inspect"
+  }
+  if (aliasHits.length === 0) {
+    return "no @/ imports in emitted .d.ts"
+  }
+  const listed = aliasHits.slice(0, 8).join(", ")
+  const more = aliasHits.length > 8 ? "…" : ""
+  return `@/ still appears in: ${listed}${more}`
+}
+
+async function runConsumerSmoke(outdir: string): Promise<void> {
+  const consumerDir = join(outdir, "consumer-smoke")
+  await mkdir(consumerDir, { recursive: true })
+  await writeFile(
+    join(consumerDir, "package.json"),
+    JSON.stringify({
+      name: "archstone-native-dts-smoke",
+      type: "module",
+      private: true,
+    })
+  )
+  await writeFile(
+    join(consumerDir, "tsconfig.json"),
+    JSON.stringify({
+      compilerOptions: {
+        module: "ESNext",
+        moduleResolution: "bundler",
+        strict: true,
+        noEmit: true,
+        skipLibCheck: false,
+        paths: {
+          "archstone/core": [join(outdir, "core/index.d.ts")],
+          "archstone/domain/enterprise": [
+            join(outdir, "domain/enterprise/index.d.ts"),
+          ],
+        },
+      },
+      include: ["./smoke.ts"],
+    })
+  )
+  await writeFile(
+    join(consumerDir, "smoke.ts"),
+    `
 import type { EventHandler, UniqueEntityId } from "archstone/core"
 import type { AggregateRoot, Entity } from "archstone/domain/enterprise"
 
@@ -198,26 +177,74 @@ type _Handler = EventHandler<{
 const ok: [_Id, _Entity, _Aggregate, _Handler] | null = null
 void ok
 `
-      )
+  )
 
-      const smoke = await $`bunx tsc --noEmit -p ${consumerDir}/tsconfig.json`
-        .quiet()
-        .nothrow()
-      const smokeOk = smoke.exitCode === 0
-      record(
-        "consumer-smoke",
-        smokeOk,
-        smokeOk
-          ? "consumer can import core + domain/enterprise together"
-          : smoke.stderr.toString().trim() ||
-              smoke.stdout.toString().trim() ||
-              "tsc smoke failed"
-      )
+  const smoke = await $`bunx tsc --noEmit -p ${consumerDir}/tsconfig.json`
+    .quiet()
+    .nothrow()
+  const smokeOk = smoke.exitCode === 0
+  record(
+    "consumer-smoke",
+    smokeOk,
+    smokeOk
+      ? "consumer can import core + domain/enterprise together"
+      : smoke.stderr.toString().trim() ||
+          smoke.stdout.toString().trim() ||
+          "tsc smoke failed"
+  )
+}
+
+async function main(): Promise<number> {
+  console.log(`probe-native-dts — Bun ${Bun.version}\n`)
+
+  const helpHasDts = await helpMentionsDts()
+  record(
+    "stable-cli-dts",
+    helpHasDts,
+    helpHasDts
+      ? "`bun build --help` lists --dts"
+      : "`bun build --help` does not list --dts (still missing or experimental-only)"
+  )
+
+  const outdir = await mkdtemp(join(tmpdir(), "archstone-native-dts-"))
+  try {
+    const buildOk = await runNativeBuild(outdir)
+    const dtsFiles = buildOk ? await collectDtsFiles(outdir) : []
+    record(
+      "dts-emitted",
+      dtsFiles.length > 0,
+      dtsFiles.length > 0
+        ? `emitted ${dtsFiles.length} .d.ts file(s)`
+        : "`--dts` produced no .d.ts (ignored or unsupported)"
+    )
+
+    const missingSubpaths = await findMissingSubpaths(outdir)
+    record(
+      "subpath-dts",
+      missingSubpaths.length === 0 && dtsFiles.length > 0,
+      missingSubpaths.length === 0 && dtsFiles.length > 0
+        ? "all published subpaths have index.d.ts"
+        : `missing .d.ts: ${missingSubpaths.join(", ") || "(none emitted)"}`
+    )
+
+    const aliasHits = await findAliasLeaks(outdir, dtsFiles)
+    record(
+      "no-path-alias-leak",
+      dtsFiles.length > 0 && aliasHits.length === 0,
+      aliasLeakDetail(dtsFiles.length, aliasHits)
+    )
+
+    const readyForSmoke =
+      missingSubpaths.length === 0 &&
+      dtsFiles.length > 0 &&
+      aliasHits.length === 0
+    if (readyForSmoke) {
+      await runConsumerSmoke(outdir)
     } else {
       record(
         "consumer-smoke",
         false,
-        "skipped — dts outputs are incomplete or still leak `@/`"
+        "skipped — dts outputs are incomplete or still leak @/"
       )
     }
   } finally {
