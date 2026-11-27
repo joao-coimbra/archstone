@@ -27,7 +27,7 @@ The library is published to npm as `archstone` and exposes four entry points:
 - Public exports or signatures change under `src/core`, `src/domain/enterprise`, or `src/domain/application`
 - Import paths, layer rules, or recommended patterns in `AGENTS.md` change for consumers
 - New primitives ship that consumers should use (`Maybe`, `attempt`, `shouldRun`, etc.)
-- Examples in JSDoc or README would lead an agent to generate wrong code
+- Examples in JSDoc, the README, or the tutorial would lead an agent to generate wrong code
 
 **What to update:**
 
@@ -36,6 +36,23 @@ The library is published to npm as `archstone` and exposes four entry points:
 3. Keep `.agents/skills/use-archstone` as a symlink to that folder (do not duplicate content)
 
 **Do not** ship an API change that agents would misuse without updating the skill in the same change.
+
+### Keep the README and the tutorial in sync
+
+`README.md` and `docs/tutorial.md` explain the public API to new users. They must agree with the code and with each other.
+
+**When to update them (required in the same PR):**
+
+- A public class, function, method, or signature changes under `src/core`, `src/domain/enterprise`, or `src/domain/application`
+- A recommended pattern changes: imports, `Either` / `Maybe`, repositories, domain events, or factories
+- An example in either document would no longer compile, or would contradict the other document
+
+**What to update:**
+
+1. `README.md` — what Archstone is, when to use it, and the building blocks
+2. `docs/tutorial.md` — the registration walkthrough, wherever it shows the changed API
+
+Update both documents in the same change. If the change appears in only one of them, bring the other into agreement before merging. If neither document shows the changed API, leave them as they are.
 
 ```bash
 git checkout -b pr-1 && git add <files> && git commit && git push
