@@ -104,12 +104,5 @@ const bunUuidV7 = (): string => {
  */
 export const UniqueEntityId: typeof EntityId = EntityId.withDefault(bunUuidV7)
 
-/**
- * @deprecated `UniqueEntityId` is deprecated and will be removed in 2.0.
- * Until then `new UniqueEntityId()` still generates a UUID v7 with
- * `Bun.randomUUIDv7`, and `new UniqueEntityId(value)` stores that string.
- * New code does not import `UniqueEntityId` from Archstone. The project
- * defines its own constructor with {@link EntityId.withDefault}.
- * {@link EntityId} and {@link EntityId.withDefault} ship in 1.6.0.
- */
+/** @deprecated Removed in 2.0. Use {@link EntityId}. */
 export type UniqueEntityId = EntityId
