@@ -40,7 +40,7 @@ export class EntityId {
   static withDefault(generate: () => string): typeof DefaultedEntityId {
     return class extends DefaultedEntityId {
       constructor(value?: string) {
-        super(value === undefined ? generate() : value)
+        super(value ?? generate())
       }
     }
   }
