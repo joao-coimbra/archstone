@@ -24,10 +24,10 @@ import type { EntityId } from "@/core/index"
  *   get name() { return this.props.name }
  *   get email() { return this.props.email }
  *
- *   static create(props: Optional<UserProps, "createdAt">, id: EntityId): User {
+ *   static create(props: Optional<UserProps, "createdAt">, id?: EntityId): User {
  *     return new User(
  *       { ...props, createdAt: props.createdAt ?? new Date() },
- *       id,
+ *       id ?? new EntityId(randomUUID()),
  *     )
  *   }
  * }

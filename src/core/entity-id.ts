@@ -1,19 +1,22 @@
 /**
  * Identity of a domain entity, wrapped so equality is by value.
  *
- * The library does not generate the value. The project extends this class,
- * usually as `UniqueEntityId`, and decides how a new id is created. A stored
- * id is passed in as the string already saved. Generation stays in the domain,
- * including when the database is able to assign a key.
+ * The library does not generate the value. The entity `create()` method does,
+ * when the caller omits the id. A stored id is passed in as the string already
+ * saved. Generation stays in the domain, including when the database is able
+ * to assign a key.
  *
  * @example
  * ```ts
  * import { randomUUID } from "node:crypto"
- * import { EntityId } from "archstone/core"
+ * import { EntityId, type Optional } from "archstone/core"
  *
- * export class UniqueEntityId extends EntityId {
- *   constructor(value: string = randomUUID()) {
- *     super(value)
+ * class User extends Entity<UserProps> {
+ *   static create(props: Optional<UserProps, "createdAt">, id?: EntityId): User {
+ *     return new User(
+ *       { ...props, createdAt: props.createdAt ?? new Date() },
+ *       id ?? new EntityId(randomUUID()),
+ *     )
  *   }
  * }
  * ```
@@ -56,24 +59,12 @@ export class EntityId {
 
 /**
  * @deprecated `UniqueEntityId` no longer generates an id. It is the same
- * constructor as {@link EntityId} and requires the string. Extend `EntityId`
- * in the project and put generation in that constructor.
- *
- * @example
- * ```ts
- * import { randomUUID } from "node:crypto"
- * import { EntityId } from "archstone/core"
- *
- * export class UniqueEntityId extends EntityId {
- *   constructor(value: string = randomUUID()) {
- *     super(value)
- *   }
- * }
- * ```
+ * constructor as {@link EntityId} and requires the string. Generate the id
+ * in the entity `create()` method: `id ?? new EntityId(randomUUID())`.
  */
 export const UniqueEntityId: typeof EntityId = EntityId
 
 /**
- * @deprecated Use {@link EntityId}. Generation belongs in a project subclass.
+ * @deprecated Use {@link EntityId}. Generation belongs in the entity `create()` method.
  */
 export type UniqueEntityId = EntityId

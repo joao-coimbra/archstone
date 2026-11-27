@@ -17,10 +17,10 @@ import { Entity } from "./entity"
  * @example
  * ```ts
  * class User extends AggregateRoot<UserProps> {
- *   static create(props: Optional<UserProps, "createdAt">, id: EntityId): User {
+ *   static create(props: Optional<UserProps, "createdAt">, id?: EntityId): User {
  *     const user = new User(
  *       { ...props, createdAt: props.createdAt ?? new Date() },
- *       id,
+ *       id ?? new EntityId(randomUUID()),
  *     )
  *
  *     user.addDomainEvent(new UserCreatedEvent(user))

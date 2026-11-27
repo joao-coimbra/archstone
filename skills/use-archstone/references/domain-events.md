@@ -30,14 +30,14 @@ class UserCreatedEvent implements DomainEvent {
 ## Raising Events (inside aggregate)
 
 ```ts
+import { randomUUID } from "node:crypto"
+import type { EntityId, Optional } from "archstone/core"
+
 class User extends AggregateRoot<UserProps> {
-  static create(
-    props: Optional<UserProps, "createdAt">,
-    id?: UniqueEntityId
-  ): User {
+  static create(props: Optional<UserProps, "createdAt">, id?: EntityId): User {
     const user = new User(
       { ...props, createdAt: props.createdAt ?? new Date() },
-      id ?? new UniqueEntityId()
+      id ?? new EntityId(randomUUID())
     )
     user.addDomainEvent(new UserCreatedEvent(user))
     return user
