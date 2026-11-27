@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, mock } from "bun:test"
-import type { DomainEvent, UniqueEntityId } from "@/core/index"
-import { DomainEvents, UniqueEntityId as EntityId } from "@/core/index"
+import type { DomainEvent, EntityId } from "@/core/index"
+import { DomainEvents, EntityId as Id } from "@/core/index"
 import { AggregateRoot } from "@/domain/enterprise/index"
 
 class CustomAggregateCreated implements DomainEvent {
@@ -12,14 +12,14 @@ class CustomAggregateCreated implements DomainEvent {
     this.occurredAt = new Date()
   }
 
-  getAggregateId(): UniqueEntityId {
+  getAggregateId(): EntityId {
     return this.aggregate.id
   }
 }
 
 class CustomAggregate extends AggregateRoot<null> {
   static create() {
-    const aggregate = new CustomAggregate(null)
+    const aggregate = new CustomAggregate(null, new Id(crypto.randomUUID()))
 
     aggregate.addDomainEvent(new CustomAggregateCreated(aggregate))
 
@@ -30,7 +30,7 @@ class CustomAggregate extends AggregateRoot<null> {
     this.addDomainEvent(new CustomAggregateCreated(this))
   }
 
-  static createWith(id: UniqueEntityId) {
+  static createWith(id: EntityId) {
     const aggregate = new CustomAggregate(null, id)
 
     aggregate.addDomainEvent(new CustomAggregateCreated(aggregate))
@@ -135,7 +135,7 @@ describe("Domain Events", () => {
   })
 
   it("dispatches every marked instance that shares an id", async () => {
-    const id = new EntityId("same-id")
+    const id = new Id("same-id")
     const first = CustomAggregate.createWith(id)
     const second = CustomAggregate.createWith(id)
     let calls = 0

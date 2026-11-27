@@ -6,7 +6,7 @@
 - Dispatch **after** successful persistence — never before
 - Define handlers as classes implementing `EventHandler<T>` from `archstone/core` with `setupSubscriptions()` and `handle(event: T)`
 - Call `setupSubscriptions()` in the constructor — just instantiate the handler in the composition root
-- Dispatch via `await DomainEvents.dispatchEventsForAggregate(aggregate.id)` — argument is `UniqueEntityId`, and the promise settles when every handler for that save has settled
+- Dispatch via `await DomainEvents.dispatchEventsForAggregate(aggregate.id)` — argument is `EntityId`, and the promise settles when every handler for that save has settled
 - `clearEvents()` runs only after those handlers settle — do not call it manually. A rejected handler rejects the dispatch and leaves the events in place
 - Test isolation: `DomainEvents.clearHandlers()`, `DomainEvents.clearMarkedAggregates()`, and reset `DomainEvents.shouldRun = true`
 - Set `DomainEvents.shouldRun = false` to skip dispatch without clearing handlers. The events stay on the aggregate until a later dispatch or `clearMarkedAggregates()`
@@ -16,12 +16,12 @@
 ## DomainEvent shape
 
 ```ts
-import type { DomainEvent, UniqueEntityId } from "archstone/core"
+import type { DomainEvent, EntityId } from "archstone/core"
 
 class UserCreatedEvent implements DomainEvent {
   occurredAt = new Date()
   constructor(public readonly user: User) {}
-  getAggregateId(): UniqueEntityId {
+  getAggregateId(): EntityId {
     return this.user.id
   }
 }
@@ -30,11 +30,11 @@ class UserCreatedEvent implements DomainEvent {
 ## Raising Events (inside aggregate)
 
 ```ts
+import type { EntityId, Optional } from "archstone/core"
+import { UniqueEntityId } from "@/core/unique-entity-id"
+
 class User extends AggregateRoot<UserProps> {
-  static create(
-    props: Optional<UserProps, "createdAt">,
-    id?: UniqueEntityId
-  ): User {
+  static create(props: Optional<UserProps, "createdAt">, id?: EntityId): User {
     const user = new User(
       { ...props, createdAt: props.createdAt ?? new Date() },
       id ?? new UniqueEntityId()
@@ -71,7 +71,7 @@ class OnUserCreated implements EventHandler<UserCreatedEvent> {
 ```ts
 async create(user: User): Promise<void> {
   await this.db.insert(user)
-  await DomainEvents.dispatchEventsForAggregate(user.id) // UniqueEntityId, not string
+  await DomainEvents.dispatchEventsForAggregate(user.id) // EntityId, not string
 }
 ```
 
@@ -90,7 +90,7 @@ await DomainEvents.dispatchEventsForAggregate(user.id)
 await this.db.insert(user) // wrong order
 
 // ❌ passing string
-DomainEvents.dispatchEventsForAggregate(user.id.toValue()) // use UniqueEntityId
+DomainEvents.dispatchEventsForAggregate(user.id.toValue()) // use EntityId
 
 // ❌ calling clearEvents() manually
 user.clearEvents() // dispatchEventsForAggregate handles this
