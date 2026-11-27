@@ -1,46 +1,47 @@
-# Tutorial: Building a Backend Feature with Archstone
+# Tutorial: Register a user
 
-This tutorial walks you through building a complete backend feature — registering a user — using every major primitive Archstone provides. You will end with a fully structured, testable feature that follows Domain-Driven Design and Clean Architecture conventions.
+This tutorial builds one feature with Archstone: a user registration that validates the email, refuses a duplicate, saves the user through a repository interface, and sends a welcome email only after that save.
 
-> **New to DDD?** Callout boxes like this one explain the concepts behind each step. Skip them if you are already familiar with DDD.
+> **New to these ideas?** The notes in this tutorial name the concept behind each step. Skip a note when you already know it.
 
 ---
 
-## Before You Start
+## Before you start
 
-**Prerequisites:**
+You need:
 
-- [Bun](https://bun.sh) >= 1.4 installed
-- Basic TypeScript familiarity
-- Archstone installed in your project:
+- [Bun](https://bun.sh) 1.4 or newer
+- Basic TypeScript
+- Archstone in the project:
 
 ```bash
 bun add archstone
 ```
 
-**What you will build:**
+You will add these files:
 
-A `RegisterUser` feature, end-to-end:
+```
+src/domain/enterprise/errors.ts
+src/domain/enterprise/email.ts
+src/domain/enterprise/user-created-event.ts
+src/domain/enterprise/user.ts
+src/domain/application/user-repository.ts
+src/domain/application/register-user.ts
+src/infra/on-user-created.ts
+src/domain/application/register-user.spec.ts
+```
 
-1. A `User` aggregate root with an `Email` value object
-2. A typed error contract for the failure case
-3. A `RegisterUserUseCase` that never throws
-4. A `UserRepository` interface decoupled from any database
-5. A `UserCreatedEvent` that triggers side effects after persistence
-6. A `RoleList` to track collection changes efficiently
+The enterprise files are the business model. The application files orchestrate one operation. `src/infra` is yours: Archstone does not ship database or email code.
 
-**What you will learn:**
-
-`UniqueEntityId` · `ValueObject` · `Entity` · `AggregateRoot` · `Either` · `UseCase` · `UseCaseError` · `Repository` contracts · `DomainEvent` · `EventHandler` · `WatchedList`
+Along the way you will use `UseCaseError`, `Either`, `Maybe`, `ValueObject`, `UniqueEntityId`, `AggregateRoot`, `UseCase`, repository contracts, `DomainEvent`, and `EventHandler`. A final section shows `WatchedList` for a collection that must remember what changed.
 
 ---
 
-## 1. The Problem with Traditional Code
+## 1. The code this replaces
 
-Consider a typical ad-hoc implementation:
+A registration function often looks like this:
 
 ```ts
-// ❌ No structure, no contracts, no safety
 class User {
   id: string
   name: string
@@ -49,63 +50,99 @@ class User {
 
 async function registerUser(name: string, email: string) {
   const exists = await db.findByEmail(email)
-  if (exists) throw new Error("email already taken") // caller must remember to catch
+  if (exists) throw new Error("email already taken")
 
   const user = new User()
   user.id = crypto.randomUUID()
   user.name = name
-  user.email = email.toLowerCase() // validation scattered everywhere
+  user.email = email.toLowerCase()
 
   await db.insert(user)
-  await mailer.sendWelcome(email) // side effect tightly coupled to the operation
+  await mailer.sendWelcome(email)
 }
 ```
 
-Problems:
+That function works until the project grows. The problems are in the shape of the code:
 
-- Errors are thrown — callers may forget to handle them
-- Validation logic is scattered — nothing enforces it at the type boundary
-- The mailer is called inline — if persistence fails halfway, the email was already sent
-- Identity is a raw string — nothing prevents passing an order ID where a user ID is expected
-- The function is impossible to test without a real database
+- The signature does not say that the email can be taken or invalid. The caller has to read the body to know about `throw`.
+- `"ada@example.com"` and `"not-an-email"` are both `string`. The lowercase rule lives in this function, so the next function can forget it.
+- `db` and `mailer` are concrete. A test has to provide both, and a mailer failure happens after the user is already inserted.
+- `id` is a `string`. `findById` cannot tell a user id from any other string.
 
-Archstone addresses every one of these. Let's rebuild it properly.
+The rest of this tutorial replaces that function with a use case, one file at a time.
 
 ---
 
-## 2. Modeling Identity — `UniqueEntityId`
+## 2. Name the failures
 
-Every entity in the domain needs a stable, typed identity. Archstone provides `UniqueEntityId`, a wrapper around UUID v7 (time-sortable, ideal for database indexing).
+A use case error implements `UseCaseError`. The interface asks for `message`.
 
 ```ts
-import { UniqueEntityId } from "archstone/core"
+// src/domain/enterprise/errors.ts
+import type { UseCaseError } from "archstone/domain/application"
 
-// auto-generated — use this when creating a new entity
-const id = new UniqueEntityId()
+export class InvalidEmailError implements UseCaseError {
+  message: string
 
-// from an existing value — use this when reconstructing from a database row
-const id = new UniqueEntityId("0195d810-5b3e-7000-8e3e-1a2b3c4d5e6f")
+  constructor(email: string) {
+    this.message = `"${email}" is not a valid email address.`
+  }
+}
 
-id.toValue() // → "0195d810-..." (raw string for serialization)
-id.equals(otherId) // → true / false (value comparison)
+export class UserAlreadyExistsError implements UseCaseError {
+  message = "A user with this email already exists."
+}
 ```
 
-> **Why wrap UUIDs?**
-> A raw `string` carries no semantic meaning — TypeScript won't stop you from passing a `postId` where a `userId` is expected. `UniqueEntityId` makes identity nominal: the type system rejects mismatches, and `.equals()` provides safe value comparison without `===`.
-
-You will not instantiate `UniqueEntityId` directly very often — `Entity` does it for you. But knowing the API is important for reconstruction and comparison.
+> **Why implement `UseCaseError`?**
+> These objects are results the caller handles. They stay small: a `message`, and whatever else you add. They are not unexpected exceptions, so they do not extend `Error`.
 
 ---
 
-## 3. Enforcing Invariants — `ValueObject`
+## 3. Return both outcomes with `Either`
 
-An email address is not just a string. It has rules: it must contain `@`, it should be lowercase, and two identical emails should be considered equal regardless of which object instance holds them.
-
-This is a **value object**: an object defined entirely by its properties, with no identity of its own.
+`left(error)` builds the failure. `right(value)` builds the success. Read `.value` inside the branch that called `isLeft()` or `isRight()`. TypeScript narrows `.value` there. It does not narrow the other branch, including the code after an early return.
 
 ```ts
-import { ValueObject } from "archstone/core"
-import { Either, left, right } from "archstone/core"
+import { type Either, left, right } from "archstone/core"
+import { InvalidEmailError } from "./errors.ts"
+
+function normalizeEmail(raw: string): Either<InvalidEmailError, string> {
+  const normalized = raw.trim().toLowerCase()
+
+  if (!normalized.includes("@")) {
+    return left(new InvalidEmailError(raw))
+  }
+
+  return right(normalized)
+}
+
+const result = normalizeEmail("ada@example.com")
+
+if (result.isLeft()) {
+  console.error(result.value.message)
+}
+
+if (result.isRight()) {
+  console.log(result.value)
+}
+```
+
+> **What `Either` changes**
+> The return type lists the failure. The caller branches on `isLeft()` or `isRight()`. Ignoring the result is still possible, but the failure is no longer hidden inside `throw`.
+
+---
+
+## 4. Put the email rule on a value object
+
+An email is the normalized text plus the rule that it must contain `@`. This is the function from the previous section, moved onto the email itself. Two emails with the same text are the same email, even when they are different objects. That is a value object: no identity of its own, equality by its attributes.
+
+`ValueObject` keeps `props` protected. Build it from `create()`, and on success return `right(...)`.
+
+```ts
+// src/domain/enterprise/email.ts
+import { type Either, left, right, ValueObject } from "archstone/core"
+import { InvalidEmailError } from "./errors.ts"
 
 interface EmailProps {
   value: string
@@ -123,60 +160,77 @@ export class Email extends ValueObject<EmailProps> {
       return left(new InvalidEmailError(raw))
     }
 
-    return new Email({ value: normalized }) // constructed only when valid
+    return right(new Email({ value: normalized }))
   }
 }
 ```
 
-Notice that `create()` returns `Either` — validation failure is a first-class return value, not an exception. We will define `InvalidEmailError` in the next section; for now, focus on the pattern.
-
-**Equality works by value, not reference:**
+Compare the emails after you know both calls succeeded:
 
 ```ts
-const a = Email.create("user@example.com")
-const b = Email.create("user@example.com")
+const first = Email.create("user@example.com")
+const second = Email.create("user@example.com")
 
-// if (a.isRight() && b.isRight())
-a.value.equals(b.value) // ✅ true — same props, different instances
+if (first.isRight() && second.isRight()) {
+  first.value.equals(second.value) // true
+}
 ```
 
-> **Why value objects?**
-> When you model concepts like `Email`, `Money`, or `Address` as plain strings or numbers, you lose their constraints. A value object forces validation to happen in one place and makes equality semantically correct. Two `Email` instances with the same address _are_ the same email.
+> **Why a value object?**
+> `Email`, `Money`, or `Address` stop being bare strings. The rule runs in `create()`, and `.equals()` compares the attributes. `===` compares the two objects, so it stays false here.
 
 ---
 
-## 4. Modeling Your Domain — `Entity` & `AggregateRoot`
+## 5. Give the user an id
 
-### 4.1 Typed errors first
-
-Before defining `User`, define the errors that can arise from its creation. Error classes **implement** `UseCaseError` — they do not extend `Error`.
+`UniqueEntityId` wraps a UUID v7. The value is time-sortable, which suits a database index. `Entity` creates one when you omit the id.
 
 ```ts
-import { UseCaseError } from "archstone/domain/application"
+import { UniqueEntityId } from "archstone/core"
 
-export class InvalidEmailError implements UseCaseError {
-  message: string
+const generated = new UniqueEntityId()
+generated.toValue() // the string you store and pass to findById
 
-  constructor(email: string) {
-    this.message = `"${email}" is not a valid email address.`
+const stored = new UniqueEntityId("0195d810-5b3e-7000-8e3e-1a2b3c4d5e6f")
+generated.equals(stored) // false
+```
+
+`toValue()` is the plain string. `findById` takes that string. `equals()` compares two ids. `===` compares the objects.
+
+> **What the wrapper gives you**
+> A repository method can ask for `UniqueEntityId` instead of any `string`, and comparison goes through `equals()`. It is still one id type for every entity. A user id and an order id are both `UniqueEntityId`, so the type does not distinguish them. Put that distinction in the repository method, or in the aggregate that owns the reference.
+
+You rarely call `new UniqueEntityId()` yourself. `User.create()` does it when you are registering someone new, and you pass an existing id when you rebuild a user from a saved row.
+
+---
+
+## 6. Model the user
+
+`User` is the consistency boundary for this feature: the name, the email, and the fact that a new user was created. It extends `AggregateRoot`, which can record domain events. An object with an id and no events extends `Entity` instead. An order line is a typical `Entity`. The order that owns the lines, and that records "order placed", is the `AggregateRoot`.
+
+The event carries the user that was created. `getAggregateId()` tells the dispatcher which aggregate raised it.
+
+```ts
+// src/domain/enterprise/user-created-event.ts
+import { type DomainEvent, type UniqueEntityId } from "archstone/core"
+import type { User } from "./user.ts"
+
+export class UserCreatedEvent implements DomainEvent {
+  occurredAt = new Date()
+
+  constructor(public readonly user: User) {}
+
+  getAggregateId(): UniqueEntityId {
+    return this.user.id
   }
-}
-
-export class UserAlreadyExistsError implements UseCaseError {
-  message = "A user with this email already exists."
 }
 ```
 
-> **Why `implements UseCaseError` and not `extends Error`?**
-> `UseCaseError` is a simple interface that requires only `message: string`. Not extending `Error` keeps error objects lightweight, serializable, and free from the quirks of JavaScript's `Error` prototype chain. It also signals intent clearly: these are domain errors, not runtime exceptions.
-
-### 4.2 The `User` aggregate
-
-A `User` owns the consistency boundary for user data. Because it will raise domain events, it extends `AggregateRoot` rather than `Entity`.
-
 ```ts
-import { AggregateRoot, UniqueEntityId, Optional } from "archstone/core"
-import { Email } from "./email.ts"
+// src/domain/enterprise/user.ts
+import { type Optional, type UniqueEntityId } from "archstone/core"
+import { AggregateRoot } from "archstone/domain/enterprise"
+import type { Email } from "./email.ts"
 import { UserCreatedEvent } from "./user-created-event.ts"
 
 interface UserProps {
@@ -207,8 +261,7 @@ export class User extends AggregateRoot<UserProps> {
       id
     )
 
-    const isNew = !id
-    if (isNew) {
+    if (!id) {
       user.addDomainEvent(new UserCreatedEvent(user))
     }
 
@@ -217,100 +270,60 @@ export class User extends AggregateRoot<UserProps> {
 }
 ```
 
-A few important details:
+`Optional<UserProps, "createdAt">` lets the caller skip `createdAt`. The stored props still include it, because `create()` fills the default.
 
-- `Optional<UserProps, "createdAt">` makes `createdAt` optional at the call site. The default is set inside `create()`. This pattern keeps the factory ergonomic while keeping the stored props fully typed.
-- The optional `id` parameter lets you reconstruct an existing user from the database by passing its persisted id. If omitted, a new `UniqueEntityId` is generated.
-- The `isNew` check prevents re-raising `UserCreatedEvent` when rehydrating an entity from the database.
-- `addDomainEvent()` is a protected method inherited from `AggregateRoot` — it queues the event and marks the aggregate for dispatch.
+Pass `id` only when the row already exists. A missing id means this call is a registration, so `create()` records `UserCreatedEvent`. Rebuilding a user from the database passes the stored id and does not record that event again. `addDomainEvent()` is protected. It keeps the event on the aggregate until something dispatches it.
 
-> **`Entity` vs `AggregateRoot` — when to use which?**
-> Use `Entity` for objects that have identity but do not own domain events or act as a consistency boundary (e.g., an `Address` inside a `User`). Use `AggregateRoot` when the object is the root of a cluster, enforces invariants across its children, and needs to raise events. There is usually one `AggregateRoot` per use case transaction.
+`user-created-event.ts` imports `User` as a type only, and `user.ts` imports the event class. Loading the user does not load itself again.
 
 ---
 
-## 5. Handling Errors Without Throwing — `Either`
+## 7. Write the use case
 
-`Either<L, R>` is a discriminated union with two sides:
+### The repository interface
 
-- `Left<L>` — the failure case, constructed with `left(error)`
-- `Right<R>` — the success case, constructed with `right(value)`
-
-Use cases **always** return `Either`. This forces callers to handle both outcomes at the type level — the compiler will not let a failure go unaddressed.
+The use case depends on an interface. The class that talks to the database implements it in your infrastructure.
 
 ```ts
-import { Either, left, right } from "archstone/core"
-
-type RegisterResult = Either<UserAlreadyExistsError | InvalidEmailError, User>
-```
-
-Narrowing at the call site:
-
-```ts
-const result = await registerUser.execute({ name: "Ada", email: "ada@example.com" })
-
-if (result.isLeft()) {
-  // result.value is UserAlreadyExistsError | InvalidEmailError
-  console.error(result.value.message)
-  return
-}
-
-// result.value is User — TypeScript knows this is the success branch
-console.log(result.value.name)
-```
-
-> **Why not just throw?**
-> Thrown exceptions are invisible in the type signature — callers have no way to know what can go wrong without reading the implementation. `Either` makes every failure path explicit in the return type, eliminating entire classes of unhandled errors.
-
----
-
-## 6. Writing the Use Case — `UseCase`
-
-A use case orchestrates a single application operation. It receives typed input, interacts with the domain and repositories, and returns `Either`.
-
-### 6.1 Define the repository contract first
-
-Repository interfaces live in the application layer — implementations live in infrastructure. This keeps the domain decoupled from any database.
-
-```ts
-import { Repository } from "archstone/domain/application"
-import { User } from "../enterprise/user.ts"
+// src/domain/application/user-repository.ts
+import type { Maybe } from "archstone/core"
+import type { Repository } from "archstone/domain/application"
+import type { User } from "../enterprise/user.ts"
 
 export interface UserRepository extends Repository<User> {
-  findByEmail(email: string): Promise<User | null>
+  findByEmail(email: string): Promise<Maybe<User>>
 }
 ```
 
-`Repository<User>` composes `Findable<User>`, `Creatable<User>`, `Saveable<User>`, and `Deletable<User>`. Add only the extra methods your domain actually needs.
+`Repository<User>` includes these four contracts. A repository that does not need all of them extends only the ones it needs. An audit log often extends `Creatable<AuditLog>` and nothing else.
 
-> **Available segregated contracts:**
->
-> | Contract       | Method                                     |
-> | -------------- | ------------------------------------------ |
-> | `Findable<T>`  | `findById(id: string): Promise<T \| null>` |
-> | `Creatable<T>` | `create(entity: T): Promise<void>`         |
-> | `Saveable<T>`  | `save(entity: T): Promise<void>`           |
-> | `Deletable<T>` | `delete(entity: T): Promise<void>`         |
->
-> Prefer composing only what you need — an audit log repository may only need `Creatable<AuditLog>`.
+| Contract       | Method                                    |
+| -------------- | ----------------------------------------- |
+| `Findable<T>`  | `findById(id: string): Promise<Maybe<T>>` |
+| `Creatable<T>` | `create(entity: T): Promise<void>`        |
+| `Saveable<T>`  | `save(entity: T): Promise<void>`          |
+| `Deletable<T>` | `delete(entity: T): Promise<void>`        |
 
-**Gotchas to remember:**
+Two details are easy to miss:
 
-- `findById()` accepts a plain `string` — pass `user.id.toValue()`, not the `UniqueEntityId` object
-- `delete()` accepts the **full entity**, not an id
+- `findById` takes the string from `user.id.toValue()`, and it returns `Maybe<T>`. `isNothing()` means absent. `isJust()` means present, and `.value` is the entity. A `Maybe` is always an object, so `if (!user)` does not mean "missing".
+- `delete` takes the entity, not an id.
 
-### 6.2 The use case
+A custom query may return `T | null`. `findByEmail` returns `Maybe<User>` so this feature has one way to represent absence.
+
+### The use case
 
 ```ts
-import { UseCase } from "archstone/domain/application"
-import { Either, left, right } from "archstone/core"
-import { User } from "../enterprise/user.ts"
+// src/domain/application/register-user.ts
+import { type Either, left, right } from "archstone/core"
+import type { UseCase } from "archstone/domain/application"
 import { Email } from "../enterprise/email.ts"
 import {
-  UserAlreadyExistsError,
   InvalidEmailError,
+  UserAlreadyExistsError,
 } from "../enterprise/errors.ts"
-import { UserRepository } from "./user-repository.ts"
+import { User } from "../enterprise/user.ts"
+import type { UserRepository } from "./user-repository.ts"
 
 type RegisterUserInput = {
   name: string
@@ -331,55 +344,52 @@ export class RegisterUserUseCase
     name,
     email,
   }: RegisterUserInput): Promise<RegisterUserOutput> {
-    // Validate the email — returns Either
-    const emailOrError = Email.create(email)
-    if (emailOrError.isLeft()) return left(emailOrError.value)
+    const emailResult = Email.create(email)
 
-    // Check for duplicates
-    const existing = await this.users.findByEmail(email)
-    if (existing) return left(new UserAlreadyExistsError())
+    if (emailResult.isRight()) {
+      const emailAddress = emailResult.value
+      const existing = await this.users.findByEmail(emailAddress.value)
 
-    // Create the aggregate — domain event is queued inside
-    const user = User.create({ name, email: emailOrError.value })
+      if (existing.isJust()) {
+        return left(new UserAlreadyExistsError())
+      }
 
-    // Persist — event dispatch happens after this
-    await this.users.create(user)
+      const user = User.create({ name, email: emailAddress })
+      await this.users.create(user)
+      return right(user)
+    }
 
-    return right(user)
+    if (emailResult.isLeft()) {
+      return left(emailResult.value)
+    }
+
+    return left(new InvalidEmailError(email))
   }
 }
 ```
 
-The use case has no knowledge of the database, the HTTP layer, or the mailer. It only orchestrates domain logic.
+The lookup uses `emailAddress.value`, the normalized text. Searching with the raw input would miss `Ada@Example.com` after the first save stored `ada@example.com`.
+
+The success path sits inside `isRight()`, and the known failure sits inside `isLeft()`. The final `return` is there because `Either` is an abstract class: TypeScript does not treat those two checks as exhaustive. `Email.create` still only returns a left or a right.
+
+The class receives `UserRepository`, not a database client. It returns the user or one of the two errors. The welcome email is not here. The aggregate already recorded that a user was created. The next section reacts to that record.
 
 ---
 
-## 7. Reacting to Domain Events — `DomainEvent` & `EventHandler<T>`
+## 8. Send the email after the save
 
-Domain events let you decouple side effects (sending a welcome email, logging to an audit trail) from the operation that caused them. The event is raised inside the aggregate; infrastructure dispatches it after the aggregate is safely persisted.
+### The handler
 
-### 7.1 Define the event
+A handler implements `EventHandler<T>` from `archstone/core`. The constructor subscribes it. Create one instance when the process starts, before any registration runs.
 
 ```ts
-import { DomainEvent, UniqueEntityId } from "archstone/core"
-import { User } from "./user.ts"
+// src/infra/on-user-created.ts
+import { DomainEvents, type EventHandler } from "archstone/core"
+import { UserCreatedEvent } from "../domain/enterprise/user-created-event.ts"
 
-export class UserCreatedEvent implements DomainEvent {
-  occurredAt = new Date()
-
-  constructor(public readonly user: User) {}
-
-  getAggregateId(): UniqueEntityId {
-    return this.user.id
-  }
+interface Mailer {
+  sendWelcome(email: string): Promise<void>
 }
-```
-
-### 7.2 Write the handler
-
-```ts
-import { DomainEvents, EventHandler } from "archstone/core"
-import { UserCreatedEvent } from "../enterprise/user-created-event.ts"
 
 export class OnUserCreated implements EventHandler<UserCreatedEvent> {
   constructor(private readonly mailer: Mailer) {
@@ -396,30 +406,29 @@ export class OnUserCreated implements EventHandler<UserCreatedEvent> {
 }
 ```
 
-The handler self-registers in its constructor. Instantiate it once in your infrastructure setup — before any use cases run — so it is ready to react when events are dispatched.
+```ts
+new OnUserCreated(mailer)
+```
 
-### 7.3 Dispatch after persistence
+### Dispatch from the repository
 
-In your repository implementation (infrastructure layer), dispatch events immediately after a successful write:
+Call `dispatchEventsForAggregate` after the write succeeds. The argument is `user.id`, the `UniqueEntityId`. The method starts the handlers, then clears the aggregate's events.
 
 ```ts
-// PrismaUserRepository.ts — infrastructure, not in this library
 import { DomainEvents } from "archstone/core"
 
 async create(user: User): Promise<void> {
-  await this.prisma.user.create({ data: toPersistence(user) })
-
-  // Dispatch all events queued on this aggregate
+  await this.database.insert(user)
   DomainEvents.dispatchEventsForAggregate(user.id)
 }
 ```
 
-> **Why dispatch after persistence?**
-> If you sent the welcome email _before_ committing to the database and then the write failed, you would have a user who received a welcome email but does not exist in the system. Dispatching after persistence guarantees that side effects only happen when the state change is durable.
+`dispatchEventsForAggregate` starts the handlers and does not wait for them. The insert is already done. The welcome email is not part of the use case result.
 
-### 7.4 Test isolation
+> **Why dispatch comes after the insert**
+> The event means "a user was stored". Dispatching after the insert keeps the email on that side of the write. `clearEvents()` belongs to the dispatcher. Do not call it from the use case.
 
-In tests, always reset the registry between cases to prevent handler cross-contamination:
+In tests, reset the registry so one case does not see another case's handlers or pending aggregates:
 
 ```ts
 import { DomainEvents } from "archstone/core"
@@ -428,21 +437,145 @@ import { beforeEach } from "bun:test"
 beforeEach(() => {
   DomainEvents.clearHandlers()
   DomainEvents.clearMarkedAggregates()
+  DomainEvents.shouldRun = true
 })
 ```
 
+`shouldRun = false` keeps the handlers registered and skips dispatch. Use that when a test builds aggregates and wants no side effects. Set it back to `true` afterwards.
+
 ---
 
-## 8. Tracking Collection Changes — `WatchedList`
+## 9. Follow one registration
 
-When an aggregate owns a collection (tags on a post, roles on a user), you do not want to overwrite the entire collection on every save. `WatchedList` tracks only what changed — additions and removals — so the repository writes the minimal diff.
+```
+RegisterUserUseCase.execute({ name, email })
+  │
+  ├─ Email.create(email)                 Either<InvalidEmailError, Email>
+  ├─ users.findByEmail(normalized)       Maybe<User>
+  ├─ User.create({ name, email })        records UserCreatedEvent when id is omitted
+  ├─ users.create(user)                  writes the row, then dispatches
+  │     └─ OnUserCreated.handle(event)
+  │           └─ mailer.sendWelcome(user.email.value)
+  └─ right(user)                         Either<..., User>
+```
 
-Subclass `WatchedList` inside your domain model and implement `compareItems`:
+| Layer                          | Responsibility                                             |
+| ------------------------------ | ---------------------------------------------------------- |
+| `archstone/core`               | `Either`, `Maybe`, `ValueObject`, `UniqueEntityId`, events |
+| `archstone/domain/enterprise`  | `Entity`, `AggregateRoot`                                  |
+| `archstone/domain/application` | `UseCase` and repository interfaces                        |
+| Your infrastructure            | The database, HTTP, and the mailer                         |
+
+---
+
+## 10. Test the use case
+
+The test uses an in-memory repository. `findById` returns `nothing()` when the id is absent, which is what `Findable` requires.
+
+```ts
+// src/domain/application/register-user.spec.ts
+import { beforeEach, expect, test } from "bun:test"
+import { DomainEvents, just, nothing } from "archstone/core"
+import {
+  InvalidEmailError,
+  UserAlreadyExistsError,
+} from "../enterprise/errors.ts"
+import type { User } from "../enterprise/user.ts"
+import { RegisterUserUseCase } from "./register-user.ts"
+import type { UserRepository } from "./user-repository.ts"
+
+class InMemoryUserRepository implements UserRepository {
+  items: User[] = []
+
+  async findById(id: string) {
+    const user = this.items.find((item) => item.id.toValue() === id)
+    if (!user) return nothing()
+    return just(user)
+  }
+
+  async findByEmail(email: string) {
+    const user = this.items.find((item) => item.email.value === email)
+    if (!user) return nothing()
+    return just(user)
+  }
+
+  async create(user: User) {
+    this.items.push(user)
+    DomainEvents.dispatchEventsForAggregate(user.id)
+  }
+
+  async save(user: User) {
+    const index = this.items.findIndex((item) => item.id.equals(user.id))
+    if (index >= 0) this.items[index] = user
+    DomainEvents.dispatchEventsForAggregate(user.id)
+  }
+
+  async delete(user: User) {
+    this.items = this.items.filter((item) => !item.id.equals(user.id))
+  }
+}
+
+let users: InMemoryUserRepository
+let sut: RegisterUserUseCase
+
+beforeEach(() => {
+  DomainEvents.clearHandlers()
+  DomainEvents.clearMarkedAggregates()
+  DomainEvents.shouldRun = true
+  users = new InMemoryUserRepository()
+  sut = new RegisterUserUseCase(users)
+})
+
+test("registers a new user", async () => {
+  const result = await sut.execute({ name: "Ada", email: "ada@example.com" })
+
+  expect(result.isRight()).toBe(true)
+  if (result.isRight()) {
+    expect(result.value.name).toBe("Ada")
+    expect(result.value.email.value).toBe("ada@example.com")
+  }
+  expect(users.items).toHaveLength(1)
+})
+
+test("rejects an invalid email", async () => {
+  const result = await sut.execute({ name: "Ada", email: "not-an-email" })
+
+  expect(result.isLeft()).toBe(true)
+  if (result.isLeft()) {
+    expect(result.value).toBeInstanceOf(InvalidEmailError)
+  }
+  expect(users.items).toHaveLength(0)
+})
+
+test("rejects a duplicate email", async () => {
+  await sut.execute({ name: "Ada", email: "ada@example.com" })
+
+  const result = await sut.execute({
+    name: "Ada Lovelace",
+    email: "ADA@example.com",
+  })
+
+  expect(result.isLeft()).toBe(true)
+  if (result.isLeft()) {
+    expect(result.value).toBeInstanceOf(UserAlreadyExistsError)
+  }
+  expect(users.items).toHaveLength(1)
+})
+```
+
+`ADA@example.com` matches the stored `ada@example.com` because `Email.create` normalizes before the lookup.
+
+---
+
+## 11. Track what changed in a collection
+
+Registration does not need this. Use it when an aggregate owns a collection and the repository should write the difference: roles added to a user, tags removed from a post.
+
+Subclass `WatchedList` and implement `compareItems`.
 
 ```ts
 import { WatchedList } from "archstone/core"
 
-// A simple role value for illustration
 type Role = "admin" | "editor" | "viewer"
 
 class RoleList extends WatchedList<Role> {
@@ -454,189 +587,44 @@ class RoleList extends WatchedList<Role> {
     return new RoleList(roles)
   }
 }
+
+const roles = RoleList.create(["viewer"])
+roles.add("admin")
+roles.remove("viewer")
+
+roles.getNewItems() // ["admin"]
+roles.getRemovedItems() // ["viewer"]
 ```
 
-Use it inside an aggregate that manages roles:
+The repository reads that difference after `save`:
 
 ```ts
-interface UserProps {
-  name: string
-  email: Email
-  roles: RoleList
-  createdAt: Date
-}
-
-class User extends AggregateRoot<UserProps> {
-  get roles() {
-    return this.props.roles
-  }
-
-  addRole(role: Role): void {
-    this.props.roles.add(role)
-  }
-
-  removeRole(role: Role): void {
-    this.props.roles.remove(role)
-  }
-
-  // ... rest of the aggregate
-}
+const added = user.roles.getNewItems()
+const removed = user.roles.getRemovedItems()
 ```
 
-In the repository, write only what changed:
+| Method              | Behavior                                                                                      |
+| ------------------- | --------------------------------------------------------------------------------------------- |
+| `getItems()`        | The current items                                                                             |
+| `getNewItems()`     | Items added that were not in the initial list                                                 |
+| `getRemovedItems()` | Initial items that have been removed                                                          |
+| `exists(item)`      | Whether the item is in the current list                                                       |
+| `add(item)`         | Adds the item. A brand-new item is tracked as new. An item that was only removed is restored  |
+| `remove(item)`      | Removes the item. An initial item is tracked as removed. An item that was only new is dropped |
+| `update(items)`     | Replaces the list and recomputes the diff                                                     |
 
-```ts
-async save(user: User): Promise<void> {
-  const newRoles = user.roles.getNewItems()
-  const removedRoles = user.roles.getRemovedItems()
-
-  if (newRoles.length > 0) {
-    await this.db.userRoles.createMany(/* ... */)
-  }
-
-  if (removedRoles.length > 0) {
-    await this.db.userRoles.deleteMany(/* ... */)
-  }
-
-  DomainEvents.dispatchEventsForAggregate(user.id)
-}
-```
-
-> **Why not just replace the whole collection?**
-> `DELETE WHERE userId = X` followed by `INSERT` re-creates every row, breaks foreign key constraints mid-transaction, and defeats any database-level change tracking. Writing the diff is both more efficient and more correct.
-
-Available methods on any `WatchedList`:
-
-| Method              | Returns                                  |
-| ------------------- | ---------------------------------------- |
-| `getItems()`        | All current items                        |
-| `getNewItems()`     | Items added since construction           |
-| `getRemovedItems()` | Items removed since construction         |
-| `exists(item)`      | Whether an item is currently in the list |
-| `add(item)`         | Add and track as new                     |
-| `remove(item)`      | Remove and track as removed              |
-| `update(items)`     | Replace all, auto-computing the diff     |
+An item in the initial list is not reported by `getNewItems()` when you add it again. Removing an item that was added in this same session drops it from `getNewItems()` and does not report it as removed.
 
 ---
 
-## 9. Putting It All Together
+## Next
 
-Here is the full flow for the `RegisterUser` feature:
+The same shape fits `GetUser`, `UpdateUser`, and `DeleteUser`: a repository interface, a use case that returns `Either` or `Maybe`, and infrastructure behind the interface.
 
-```
-HTTP Handler (infrastructure)
-  │
-  ▼
-RegisterUserUseCase.execute({ name, email })
-  │
-  ├─ Email.create(email)                → Either<InvalidEmailError, Email>
-  ├─ userRepository.findByEmail(email)  → User | null
-  ├─ User.create({ name, email })       → queues UserCreatedEvent internally
-  ├─ userRepository.create(user)        → persists, then dispatches events
-  │     └─ DomainEvents.dispatchEventsForAggregate(user.id)
-  │           └─ OnUserCreated.handle(event)
-  │                 └─ mailer.sendWelcome(user.email.value)
-  │
-  └─ return right(user)                 → Either<..., User>
-```
-
-Each layer has one responsibility:
-
-| Layer                | Responsibility                                                               |
-| -------------------- | ---------------------------------------------------------------------------- |
-| `core`               | Language-level utilities — `Either`, `UniqueEntityId`, `ValueObject`, events |
-| `domain/enterprise`  | Business rules — entities, aggregates, value objects                         |
-| `domain/application` | Orchestration — use cases, repository interfaces                             |
-| `infrastructure`     | Implementation details — database, HTTP, email (not in this library)         |
-
----
-
-## 10. Testing the Use Case
-
-Use an in-memory repository — never a real database.
-
-```ts
-import { test, expect, beforeEach } from "bun:test"
-import { DomainEvents } from "archstone/core"
-import { RegisterUserUseCase } from "./register-user-use-case.ts"
-import { UserAlreadyExistsError } from "../enterprise/errors.ts"
-
-// In-memory implementation of UserRepository
-class InMemoryUserRepository implements UserRepository {
-  items: User[] = []
-
-  async findById(id: string) {
-    return this.items.find((u) => u.id.toValue() === id) ?? null
-  }
-
-  async findByEmail(email: string) {
-    return this.items.find((u) => u.email.value === email) ?? null
-  }
-
-  async create(user: User) {
-    this.items.push(user)
-    DomainEvents.dispatchEventsForAggregate(user.id)
-  }
-
-  async save(user: User) {
-    const index = this.items.findIndex((u) => u.id.equals(user.id))
-    if (index >= 0) this.items[index] = user
-    DomainEvents.dispatchEventsForAggregate(user.id)
-  }
-
-  async delete(user: User) {
-    this.items = this.items.filter((u) => !u.id.equals(user.id))
-  }
-}
-
-let users: InMemoryUserRepository
-let sut: RegisterUserUseCase
-
-beforeEach(() => {
-  DomainEvents.clearHandlers()
-  DomainEvents.clearMarkedAggregates()
-  users = new InMemoryUserRepository()
-  sut = new RegisterUserUseCase(users)
-})
-
-test("registers a new user", async () => {
-  const result = await sut.execute({ name: "Ada", email: "ada@example.com" })
-
-  expect(result.isRight()).toBe(true)
-  expect(users.items).toHaveLength(1)
-})
-
-test("rejects an invalid email", async () => {
-  const result = await sut.execute({ name: "Ada", email: "not-an-email" })
-
-  expect(result.isLeft()).toBe(true)
-  expect(result.value).toBeInstanceOf(InvalidEmailError)
-})
-
-test("rejects a duplicate email", async () => {
-  await sut.execute({ name: "Ada", email: "ada@example.com" })
-  const result = await sut.execute({
-    name: "Ada Lovelace",
-    email: "ada@example.com",
-  })
-
-  expect(result.isLeft()).toBe(true)
-  expect(result.value).toBeInstanceOf(UserAlreadyExistsError)
-})
-```
-
----
-
-## What's Next
-
-You now have a complete, structured feature built on Archstone. From here:
-
-- **Add more use cases** — `GetUser`, `UpdateUser`, `DeleteUser` follow the same pattern
-- **Wire the infrastructure** — implement `UserRepository` against your database (Prisma, Drizzle, raw SQL) in your infrastructure layer
-- **Install the AI skill** — your coding agent can apply these conventions automatically:
+Install the skill if a coding agent will write the next use case:
 
 ```bash
 bun x skills add joao-coimbra/archstone
 ```
 
-For a full reference of every export, see the [Package Exports](../README.md#package-exports) section of the README.
+The [README](../README.md#building-blocks) lists every building block and the public entry points.
