@@ -15,7 +15,7 @@ import type { Saveable } from "./saveable"
  * ```ts
  * // full CRUD
  * export interface UserRepository extends Repository<User> {
- *   findByEmail(email: string): Promise<User | null>
+ *   findByEmail(email: string): Promise<Maybe<User>>
  * }
  *
  * // read-only

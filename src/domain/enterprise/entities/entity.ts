@@ -1,4 +1,4 @@
-import { UniqueEntityId } from "@/core/index"
+import type { EntityId } from "@/core/index"
 
 /**
  * Base class for all domain entities.
@@ -15,7 +15,6 @@ import { UniqueEntityId } from "@/core/index"
  * @example
  * ```ts
  * interface UserProps {
- *   id: UniqueEntityId
  *   name: string
  *   email: string
  *   createdAt: Date
@@ -25,25 +24,25 @@ import { UniqueEntityId } from "@/core/index"
  *   get name() { return this.props.name }
  *   get email() { return this.props.email }
  *
- *   static create(props: Optional<UserProps, "id" | "createdAt">): User {
+ *   static create(props: Optional<UserProps, "createdAt">, id?: EntityId): User {
  *     return new User(
  *       { ...props, createdAt: props.createdAt ?? new Date() },
- *       props.id ?? new UniqueEntityId(),
+ *       id ?? new UniqueEntityId(),
  *     )
  *   }
  * }
  * ```
  */
 export abstract class Entity<Props> {
-  private readonly _id: UniqueEntityId
+  private readonly _id: EntityId
   protected props: Props
 
-  get id(): UniqueEntityId {
+  get id(): EntityId {
     return this._id
   }
 
-  protected constructor(props: Props, id?: UniqueEntityId) {
-    this._id = id ?? new UniqueEntityId()
+  protected constructor(props: Props, id: EntityId) {
+    this._id = id
     this.props = props
   }
 

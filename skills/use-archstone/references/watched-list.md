@@ -5,6 +5,9 @@
 - Subclass `WatchedList<T>` and implement `compareItems(a, b): boolean`
 - Use inside aggregates for owned collections that need change tracking
 - Persist only `getNewItems()` / `getRemovedItems()` when writing diffs
+- `update()` replaces the current items and recomputes the diff against the list the collection was created with
+- `getItems()`, `getNewItems()`, and `getRemovedItems()` return copies
+- Removing an item that is not in the list changes nothing
 
 ## API
 

@@ -1,5 +1,5 @@
-import type { UniqueEntityId } from "@/core/index"
-import type { AggregateRoot } from "@/domain/index"
+import type { EntityId } from "../entity-id"
+import type { DispatchableAggregate } from "./dispatchable-aggregate"
 import type { DomainEvent } from "./domain-event"
 
 /**
@@ -12,6 +12,21 @@ import type { DomainEvent } from "./domain-event"
 type DomainEventCallback = {
   bivarianceHack(event: DomainEvent): Promise<void>
 }["bivarianceHack"]
+
+const handlerFailures = (results: PromiseSettledResult<void>[]): unknown[] => {
+  const failures: unknown[] = []
+  for (const result of results) {
+    if (result.status === "rejected") {
+      failures.push(result.reason)
+    }
+  }
+  return failures
+}
+
+interface DispatchBatch {
+  aggregate: DispatchableAggregate
+  events: DomainEvent[]
+}
 
 /**
  * Central registry and dispatcher for domain events.
@@ -31,12 +46,13 @@ type DomainEventCallback = {
  *
  * // dispatch after persistence
  * await userRepository.create(user)
- * DomainEvents.dispatchEventsForAggregate(user.id)
+ * await DomainEvents.dispatchEventsForAggregate(user.id)
  * ```
  */
 class DomainEventsImplementation {
   private readonly handlersMap = new Map<string, DomainEventCallback[]>()
-  private readonly markedAggregates = new Set<AggregateRoot<unknown>>()
+  private readonly markedAggregates = new Set<DispatchableAggregate>()
+  private readonly inFlight = new WeakSet<DomainEvent>()
 
   /**
    * Controls whether event dispatching is active.
@@ -54,27 +70,44 @@ class DomainEventsImplementation {
    *
    * @param aggregate - The aggregate to mark for dispatch
    */
-  markAggregateForDispatch(aggregate: AggregateRoot<unknown>): void {
-    if (!this.findMarkedAggregateByID(aggregate.id)) {
-      this.markedAggregates.add(aggregate)
-    }
+  markAggregateForDispatch(aggregate: DispatchableAggregate): void {
+    this.markedAggregates.add(aggregate)
   }
 
   /**
-   * Dispatches all pending events for the aggregate with the given id,
-   * clears its events, and removes it from the dispatch list.
+   * Dispatches all pending events for every marked aggregate with the given id,
+   * clears their events, and removes them from the dispatch list.
+   *
+   * Handlers for one event run together. The events stay on the aggregate until
+   * every handler for that dispatch has settled. A second dispatch started
+   * while those handlers are still running does not deliver the same events
+   * again. An event raised during the handlers stays pending for a later call.
+   * A rejected handler rejects this call and leaves the events in place.
+   *
+   * When {@link shouldRun} is `false`, this returns without dispatching or
+   * clearing, so a later call can still deliver the events.
    *
    * Should be called by the infrastructure layer after persisting the aggregate.
    *
    * @param id - The identifier of the aggregate to dispatch events for
    */
-  dispatchEventsForAggregate(id: UniqueEntityId): void {
-    const aggregate = this.findMarkedAggregateByID(id)
-    if (aggregate) {
-      this.dispatchAggregateEvents(aggregate)
-      aggregate.clearEvents()
-      this.removeAggregateFromMarkedDispatchList(aggregate)
+  async dispatchEventsForAggregate(id: EntityId): Promise<void> {
+    if (!this.shouldRun) {
+      return
     }
+    const batches = this.claim(id)
+    if (batches.length === 0) {
+      return
+    }
+    try {
+      await Promise.all(
+        batches.map((batch) => this.dispatchEvents(batch.events))
+      )
+    } catch (error) {
+      this.release(batches)
+      throw error
+    }
+    this.finish(batches)
   }
 
   /**
@@ -84,10 +117,29 @@ class DomainEventsImplementation {
    * @param eventClassName - The name of the event class to listen for
    */
   register(callback: DomainEventCallback, eventClassName: string): void {
-    if (!this.handlersMap.has(eventClassName)) {
-      this.handlersMap.set(eventClassName, [])
+    const handlers = this.handlersMap.get(eventClassName) ?? []
+    handlers.push(callback)
+    this.handlersMap.set(eventClassName, handlers)
+  }
+
+  /**
+   * Removes one registered handler. The callback must be the same function
+   * reference that was passed to {@link register}.
+   *
+   * @param callback - The function to stop invoking
+   * @param eventClassName - The name of the event class it was listening for
+   */
+  unregister(callback: DomainEventCallback, eventClassName: string): void {
+    const handlers = this.handlersMap.get(eventClassName)
+    if (!handlers) {
+      return
     }
-    this.handlersMap.get(eventClassName)?.push(callback)
+    const remaining = handlers.filter((handler) => handler !== callback)
+    if (remaining.length === 0) {
+      this.handlersMap.delete(eventClassName)
+      return
+    }
+    this.handlersMap.set(eventClassName, remaining)
   }
 
   /**
@@ -106,33 +158,74 @@ class DomainEventsImplementation {
     this.markedAggregates.clear()
   }
 
-  private dispatchAggregateEvents(aggregate: AggregateRoot<unknown>): void {
-    for (const event of aggregate.domainEvents) {
-      this.dispatch(event)
+  private claim(id: EntityId): DispatchBatch[] {
+    const batches: DispatchBatch[] = []
+    for (const aggregate of this.markedAggregatesFor(id)) {
+      if (aggregate.domainEvents.length === 0) {
+        this.markedAggregates.delete(aggregate)
+        continue
+      }
+      const events = aggregate.domainEvents.filter(
+        (event) => !this.inFlight.has(event)
+      )
+      if (events.length === 0) {
+        continue
+      }
+      for (const event of events) {
+        this.inFlight.add(event)
+      }
+      this.markedAggregates.delete(aggregate)
+      batches.push({ aggregate, events })
+    }
+    return batches
+  }
+
+  private release(batches: readonly DispatchBatch[]): void {
+    for (const batch of batches) {
+      for (const event of batch.events) {
+        this.inFlight.delete(event)
+      }
+      this.markedAggregates.add(batch.aggregate)
     }
   }
 
-  private removeAggregateFromMarkedDispatchList(
-    aggregate: AggregateRoot<unknown>
-  ) {
-    this.markedAggregates.delete(aggregate)
+  private finish(batches: readonly DispatchBatch[]): void {
+    for (const batch of batches) {
+      for (const event of batch.events) {
+        this.inFlight.delete(event)
+      }
+      batch.aggregate.acknowledge(batch.events)
+    }
   }
 
-  private findMarkedAggregateByID(
-    id: UniqueEntityId
-  ): AggregateRoot<unknown> | undefined {
-    return [...this.markedAggregates].find((a) => a.id.equals(id))
+  private async dispatchEvents(events: readonly DomainEvent[]): Promise<void> {
+    await Promise.all(events.map((event) => this.dispatch(event)))
   }
 
-  private dispatch(event: DomainEvent): void {
-    if (!this.shouldRun) {
+  private markedAggregatesFor(id: EntityId): DispatchableAggregate[] {
+    const matches: DispatchableAggregate[] = []
+    for (const aggregate of this.markedAggregates) {
+      if (aggregate.id.equals(id)) {
+        matches.push(aggregate)
+      }
+    }
+    return matches
+  }
+
+  private async dispatch(event: DomainEvent): Promise<void> {
+    const handlers = this.handlersMap.get(event.constructor.name)
+    if (!handlers) {
       return
     }
-
-    const handlers = this.handlersMap.get(event.constructor.name) ?? []
-    for (const handler of handlers) {
-      handler(event)
+    const callbacks = handlers.slice()
+    const results = await Promise.allSettled(
+      callbacks.map((handler) => Promise.resolve().then(() => handler(event)))
+    )
+    const failures = handlerFailures(results)
+    if (failures.length === 0) {
+      return
     }
+    throw new AggregateError(failures, "Domain event handlers failed.")
   }
 }
 

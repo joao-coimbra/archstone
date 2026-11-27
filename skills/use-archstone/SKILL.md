@@ -1,6 +1,6 @@
 ---
 name: archstone
-description: 'Apply Archstone DDD and Clean Architecture conventions. Use when developers: (1) Create domain entities, aggregates, or value objects, (2) Write application use cases, (3) Define repository contracts, (4) Work with domain events or event handlers, (5) Ask about Either, Maybe, UniqueEntityId, WatchedList, DomainEvents, shouldRun, or UseCaseError. Triggers on: "entity", "aggregate", "value object", "use case", "repository", "domain event", "Either", "Maybe", "UniqueEntityId", "WatchedList", "DomainEvents", "archstone".'
+description: 'Apply Archstone DDD and Clean Architecture conventions. Use when developers: (1) Create domain entities, aggregates, or value objects, (2) Write application use cases, (3) Define repository contracts, (4) Work with domain events or event handlers, (5) Ask about Either, Maybe, EntityId, UniqueEntityId, WatchedList, DomainEvents, shouldRun, or UseCaseError. Triggers on: "entity", "aggregate", "value object", "use case", "repository", "domain event", "Either", "Maybe", "EntityId", "UniqueEntityId", "WatchedList", "DomainEvents", "archstone".'
 ---
 
 ## Critical: Follow Archstone Conventions
@@ -18,7 +18,7 @@ When working with Archstone:
 7. Repository contracts are interfaces only — implementations belong in infrastructure
 8. Domain events are raised inside aggregates and dispatched after persistence — never before
 9. Import `DomainEvent`, `DomainEvents`, and `EventHandler<T>` from `archstone/core` (enterprise re-exports are deprecated)
-10. Use `UniqueEntityId` (UUID v7) for all entity identifiers — never a plain `string` as identity
+10. Identity is `EntityId` from `archstone/core`. `EntityId` and `EntityId.withDefault(fn)` ship in 1.6.0. `new EntityId()` stores no id, so the insert omits the key and the database assigns it. `new EntityId(value)` stores that string. A blank string throws. `EntityId.withDefault(fn)` returns the `EntityId` class: omitting the argument stores `fn()`, and passing a string stores that string. Never a plain `string`, and never insert `null` in place of an omitted key. `UniqueEntityId` exported by Archstone is deprecated and will be removed in 2.0. Until then `new UniqueEntityId()` still generates a UUID v7 with `Bun.randomUUIDv7`. New code does not import `UniqueEntityId` from Archstone. The project defines its own constructor with `EntityId.withDefault(fn)`
 11. Use case errors must `implement UseCaseError` — not `extend Error`
 
 If you are unsure about a pattern, check [Conventions Reference](references/conventions.md) before writing code.
@@ -47,7 +47,7 @@ Define as interfaces only. Use `Repository<T>` or compose `Findable`, `Creatable
 
 ## Domain Events
 
-Raise inside the aggregate via `addDomainEvent()`. Dispatch after persistence via `DomainEvents.dispatchEventsForAggregate(aggregate.id)`. Handlers implement `EventHandler<T>` from `archstone/core`. In tests, use `clearHandlers` / `clearMarkedAggregates` / `shouldRun`. See [Domain Event Patterns](references/domain-events.md).
+Raise inside the aggregate via `addDomainEvent()`. After persistence, `await DomainEvents.dispatchEventsForAggregate(aggregate.id)`. The events are cleared only after the handlers settle. Handlers implement `EventHandler<T>` from `archstone/core`. In tests, use `clearHandlers` / `clearMarkedAggregates` / `shouldRun`. See [Domain Event Patterns](references/domain-events.md).
 
 ## WatchedList
 

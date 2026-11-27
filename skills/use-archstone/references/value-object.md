@@ -7,7 +7,7 @@
 - Prefer returning `Either<Error, ValueObject>` when callers must handle failure explicitly
 - If `create()` throws, wrap with `attempt()` (or `try/catch`) inside use cases and return `left()`
 - Never mutate `this.props` — return a new instance instead
-- Compare with `.equals()` — never `===`
+- Compare with `.equals()` — never `===`. Equality is deep: key order does not matter, an explicit `undefined` differs from a missing key, `NaN` differs from `null`, dates match by instant, and a nested value that exposes `toValue()` is compared by that value
 
 ## Example
 

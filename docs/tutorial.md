@@ -33,7 +33,7 @@ src/domain/application/register-user.spec.ts
 
 The enterprise files are the business model. The application files orchestrate one operation. `src/infra` is yours: Archstone does not ship database or email code.
 
-Along the way you will use `UseCaseError`, `Either`, `Maybe`, `ValueObject`, `UniqueEntityId`, `AggregateRoot`, `UseCase`, repository contracts, `DomainEvent`, and `EventHandler`. A final section shows `WatchedList` for a collection that must remember what changed.
+Along the way you will use `UseCaseError`, `Either`, `Maybe`, `ValueObject`, `EntityId`, `AggregateRoot`, `UseCase`, repository contracts, `DomainEvent`, and `EventHandler`. A final section shows `WatchedList` for a collection that must remember what changed.
 
 ---
 
@@ -91,6 +91,10 @@ export class InvalidEmailError implements UseCaseError {
 
 export class UserAlreadyExistsError implements UseCaseError {
   message = "A user with this email already exists."
+}
+
+export class WelcomeEmailError implements UseCaseError {
+  message = "The user was saved, but the welcome email was not sent."
 }
 ```
 
@@ -185,24 +189,45 @@ if (first.isRight() && second.isRight()) {
 
 ## 5. Give the user an id
 
-`UniqueEntityId` wraps a UUID v7. The value is time-sortable, which suits a database index. `Entity` creates one when you omit the id.
+`EntityId` and `EntityId.withDefault(fn)` ship in 1.6.0.
+
+`new EntityId()` stores no id. `toValue()` is `undefined`, so the insert omits that column and the database assigns the key. `new EntityId(value)` stores that string. A blank string throws. Use `undefined` for a missing key. `null` is a value the driver writes, and a NULL column does not take the database default.
+
+When the domain should assign the id, `EntityId.withDefault(fn)` returns the `EntityId` class. Omitting the argument stores `fn()`. Passing a string stores that string.
 
 ```ts
-import { UniqueEntityId } from "archstone/core"
+// src/core/unique-entity-id.ts
+import { EntityId } from "archstone/core"
 
+const uuidv7 = (): string => {
+  const generate = globalThis.Bun?.randomUUIDv7
+  if (generate === undefined) {
+    throw new Error("UniqueEntityId requires a UUID v7 generator.")
+  }
+  return generate()
+}
+
+export const UniqueEntityId = EntityId.withDefault(uuidv7)
+```
+
+`new EntityId()` has no id. `new UniqueEntityId()` above is a UUID v7 from the function the project passed to `withDefault`. `new UniqueEntityId(row.id)` keeps a stored string. Replace `uuidv7` with that function.
+
+```ts
 const generated = new UniqueEntityId()
 generated.toValue() // the string you store and pass to findById
 
-const stored = new UniqueEntityId("0195d810-5b3e-7000-8e3e-1a2b3c4d5e6f")
+const stored = new EntityId("0195d810-5b3e-7000-8e3e-1a2b3c4d5e6f")
 generated.equals(stored) // false
 ```
 
 `toValue()` is the plain string. `findById` takes that string. `equals()` compares two ids. `===` compares the objects.
 
 > **What the wrapper gives you**
-> A repository method can ask for `UniqueEntityId` instead of any `string`, and comparison goes through `equals()`. It is still one id type for every entity. A user id and an order id are both `UniqueEntityId`, so the type does not distinguish them. Put that distinction in the repository method, or in the aggregate that owns the reference.
+> A repository method can ask for `EntityId` instead of any `string`, and comparison goes through `equals()`. It is still one id type for every entity. A user id and an order id are both `EntityId`, so the type does not distinguish them. Put that distinction in the repository method, or in the aggregate that owns the reference.
 
-You rarely call `new UniqueEntityId()` yourself. `User.create()` does it when you are registering someone new, and you pass an existing id when you rebuild a user from a saved row.
+`Entity` requires an `EntityId`. It does not create one. The next section puts `id ?? new UniqueEntityId()` inside `User.create()`.
+
+Archstone still exports `UniqueEntityId`. That export is deprecated and will be removed in 2.0. Until then `new UniqueEntityId()` from Archstone still generates a UUID v7 with `Bun.randomUUIDv7`. New code does not import `UniqueEntityId` from Archstone. The constructor above is the project's, from `EntityId.withDefault(fn)`.
 
 ---
 
@@ -214,7 +239,7 @@ The event carries the user that was created. `getAggregateId()` tells the dispat
 
 ```ts
 // src/domain/enterprise/user-created-event.ts
-import { type DomainEvent, type UniqueEntityId } from "archstone/core"
+import { type DomainEvent, type EntityId } from "archstone/core"
 import type { User } from "./user.ts"
 
 export class UserCreatedEvent implements DomainEvent {
@@ -222,7 +247,7 @@ export class UserCreatedEvent implements DomainEvent {
 
   constructor(public readonly user: User) {}
 
-  getAggregateId(): UniqueEntityId {
+  getAggregateId(): EntityId {
     return this.user.id
   }
 }
@@ -230,8 +255,9 @@ export class UserCreatedEvent implements DomainEvent {
 
 ```ts
 // src/domain/enterprise/user.ts
-import { type Optional, type UniqueEntityId } from "archstone/core"
+import { type EntityId, type Optional } from "archstone/core"
 import { AggregateRoot } from "archstone/domain/enterprise"
+import { UniqueEntityId } from "../../core/unique-entity-id.ts"
 import type { Email } from "./email.ts"
 import { UserCreatedEvent } from "./user-created-event.ts"
 
@@ -254,13 +280,10 @@ export class User extends AggregateRoot<UserProps> {
     return this.props.createdAt
   }
 
-  static create(
-    props: Optional<UserProps, "createdAt">,
-    id?: UniqueEntityId
-  ): User {
+  static create(props: Optional<UserProps, "createdAt">, id?: EntityId): User {
     const user = new User(
       { ...props, createdAt: props.createdAt ?? new Date() },
-      id
+      id ?? new UniqueEntityId()
     )
 
     if (!id) {
@@ -274,7 +297,7 @@ export class User extends AggregateRoot<UserProps> {
 
 `Optional<UserProps, "createdAt">` lets the caller skip `createdAt`. The stored props still include it, because `create()` fills the default.
 
-Pass `id` only when the row already exists. A missing id means this call is a registration, so `create()` records `UserCreatedEvent`. Rebuilding a user from the database passes the stored id and does not record that event again. `addDomainEvent()` is protected. It keeps the event on the aggregate until something dispatches it.
+Pass `id` only when the row already exists. A missing id means this call is a registration, so `create()` uses `new UniqueEntityId()` and records `UserCreatedEvent`. `new EntityId()` is the case where the insert lets the database assign the key. Rebuilding a user from the database passes the stored id and does not record that event again. `addDomainEvent()` is protected. It keeps the event on the aggregate until something dispatches it.
 
 `user-created-event.ts` imports `User` as a type only, and `user.ts` imports the event class. Loading the user does not load itself again.
 
@@ -323,6 +346,7 @@ import { Email } from "../enterprise/email.ts"
 import {
   InvalidEmailError,
   UserAlreadyExistsError,
+  WelcomeEmailError,
 } from "../enterprise/errors.ts"
 import { User } from "../enterprise/user.ts"
 import type { UserRepository } from "./user-repository.ts"
@@ -333,7 +357,7 @@ type RegisterUserInput = {
 }
 
 type RegisterUserOutput = Either<
-  UserAlreadyExistsError | InvalidEmailError,
+  UserAlreadyExistsError | InvalidEmailError | WelcomeEmailError,
   User
 >
 
@@ -357,7 +381,14 @@ export class RegisterUserUseCase
       }
 
       const user = User.create({ name, email: emailAddress })
-      await this.users.create(user)
+      try {
+        await this.users.create(user)
+      } catch (error) {
+        if (error instanceof AggregateError) {
+          return left(new WelcomeEmailError())
+        }
+        throw error
+      }
       return right(user)
     }
 
@@ -374,7 +405,7 @@ The lookup uses `emailAddress.value`, the normalized text. Searching with the ra
 
 The email is read inside `isRight()`, where `.value` is an `Email`. The validation error is returned inside `isLeft()`, where `.value` is that error. TypeScript does not narrow the lines after either check, and it does not treat the two checks as exhaustive. The method therefore ends by building an `InvalidEmailError`. `Email.create` always returns one side or the other, so that last return does not run.
 
-The class receives `UserRepository`, not a database client. It returns the user or one of the two errors. The welcome email is not here. The aggregate already recorded that a user was created. The next section reacts to that record.
+The class receives `UserRepository`, not a database client. It returns the user, a validation error, or `WelcomeEmailError` when `create()` rejects with the `AggregateError` from a handler. The next section is that handler. The aggregate has already recorded that a user was created.
 
 ---
 
@@ -414,18 +445,18 @@ new OnUserCreated(mailer)
 
 ### Dispatch from the repository
 
-Call `dispatchEventsForAggregate` after the write succeeds. The argument is `user.id`, the `UniqueEntityId`. The method starts the handlers, then clears the aggregate's events.
+Call `await dispatchEventsForAggregate` after the write succeeds. The argument is `user.id`, the `EntityId`. The method runs the handlers, and clears the aggregate's events only after they settle. A rejected handler rejects the call and leaves the events in place.
 
 ```ts
 import { DomainEvents } from "archstone/core"
 
 async create(user: User): Promise<void> {
   await this.database.insert(user)
-  DomainEvents.dispatchEventsForAggregate(user.id)
+  await DomainEvents.dispatchEventsForAggregate(user.id)
 }
 ```
 
-`dispatchEventsForAggregate` starts the handlers and does not wait for them. The insert is already done. The welcome email is not part of the use case result.
+`await dispatchEventsForAggregate` waits until the handlers for that save have settled. The insert is already done. A rejected handler rejects `create()` with an `AggregateError` and leaves the events on the aggregate. The use case catches that error and returns `left(new WelcomeEmailError())`, so the caller still receives an `Either`. Any other rejection is unexpected and is thrown again.
 
 > **Why dispatch comes after the insert**
 > The event means "a user was stored". Dispatching after the insert keeps the email on that side of the write. `clearEvents()` belongs to the dispatcher. Do not call it from the use case.
@@ -443,7 +474,7 @@ beforeEach(() => {
 })
 ```
 
-`shouldRun = false` keeps the handlers registered and skips dispatch. Use that when a test builds aggregates and wants no side effects. Set it back to `true` afterwards.
+`shouldRun = false` keeps the handlers registered and skips dispatch. The events stay on the aggregate. Use that when a test builds aggregates and wants no side effects. Set it back to `true` afterwards, then dispatch if the test should deliver those events.
 
 ---
 
@@ -458,15 +489,15 @@ RegisterUserUseCase.execute({ name, email })
   ├─ users.create(user)                  writes the row, then dispatches
   │     └─ OnUserCreated.handle(event)
   │           └─ mailer.sendWelcome(user.email.value)
-  └─ right(user)                         Either<..., User>
+  └─ right(user)                         or left(WelcomeEmailError) if a handler rejects
 ```
 
-| Layer                          | Responsibility                                             |
-| ------------------------------ | ---------------------------------------------------------- |
-| `archstone/core`               | `Either`, `Maybe`, `ValueObject`, `UniqueEntityId`, events |
-| `archstone/domain/enterprise`  | `Entity`, `AggregateRoot`                                  |
-| `archstone/domain/application` | `UseCase` and repository interfaces                        |
-| Your infrastructure            | The database, HTTP, and the mailer                         |
+| Layer                          | Responsibility                                       |
+| ------------------------------ | ---------------------------------------------------- |
+| `archstone/core`               | `Either`, `Maybe`, `ValueObject`, `EntityId`, events |
+| `archstone/domain/enterprise`  | `Entity`, `AggregateRoot`                            |
+| `archstone/domain/application` | `UseCase` and repository interfaces                  |
+| Your infrastructure            | The database, HTTP, and the mailer                   |
 
 ---
 
@@ -503,13 +534,13 @@ class InMemoryUserRepository implements UserRepository {
 
   async create(user: User) {
     this.items.push(user)
-    DomainEvents.dispatchEventsForAggregate(user.id)
+    await DomainEvents.dispatchEventsForAggregate(user.id)
   }
 
   async save(user: User) {
     const index = this.items.findIndex((item) => item.id.equals(user.id))
     if (index >= 0) this.items[index] = user
-    DomainEvents.dispatchEventsForAggregate(user.id)
+    await DomainEvents.dispatchEventsForAggregate(user.id)
   }
 
   async delete(user: User) {
@@ -607,15 +638,15 @@ const added = user.roles.getNewItems()
 const removed = user.roles.getRemovedItems()
 ```
 
-| Method              | Behavior                                                                                      |
-| ------------------- | --------------------------------------------------------------------------------------------- |
-| `getItems()`        | The current items                                                                             |
-| `getNewItems()`     | Items added that were not in the initial list                                                 |
-| `getRemovedItems()` | Initial items that have been removed                                                          |
-| `exists(item)`      | Whether the item is in the current list                                                       |
-| `add(item)`         | Adds the item. A brand-new item is tracked as new. An item that was only removed is restored  |
-| `remove(item)`      | Removes the item. An initial item is tracked as removed. An item that was only new is dropped |
-| `update(items)`     | Replaces the list and recomputes the diff                                                     |
+| Method              | Behavior                                                                                            |
+| ------------------- | --------------------------------------------------------------------------------------------------- |
+| `getItems()`        | The current items                                                                                   |
+| `getNewItems()`     | Items added that were not in the initial list                                                       |
+| `getRemovedItems()` | Initial items that have been removed                                                                |
+| `exists(item)`      | Whether the item is in the current list                                                             |
+| `add(item)`         | Adds the item. A brand-new item is tracked as new. An item that was only removed is restored        |
+| `remove(item)`      | Removes the item. An initial item is tracked as removed. An item that was only new is dropped       |
+| `update(items)`     | Replaces the current items and recomputes the diff against the list the collection was created with |
 
 An item in the initial list is not reported by `getNewItems()` when you add it again. Removing an item that was added in this same session drops it from `getNewItems()` and does not report it as removed.
 

@@ -6,20 +6,22 @@
 - Dispatch **after** successful persistence — never before
 - Define handlers as classes implementing `EventHandler<T>` from `archstone/core` with `setupSubscriptions()` and `handle(event: T)`
 - Call `setupSubscriptions()` in the constructor — just instantiate the handler in the composition root
-- Dispatch via `DomainEvents.dispatchEventsForAggregate(aggregate.id)` — argument is `UniqueEntityId`
-- `clearEvents()` is called internally by `dispatchEventsForAggregate` — do not call manually
+- Dispatch via `await DomainEvents.dispatchEventsForAggregate(aggregate.id)` — argument is `EntityId`, and the promise settles when every handler for that save has settled
+- `clearEvents()` runs only after those handlers settle — do not call it manually. A rejected handler rejects the dispatch and leaves the events in place
 - Test isolation: `DomainEvents.clearHandlers()`, `DomainEvents.clearMarkedAggregates()`, and reset `DomainEvents.shouldRun = true`
-- Set `DomainEvents.shouldRun = false` to suppress dispatch without clearing handlers
+- Set `DomainEvents.shouldRun = false` to skip dispatch without clearing handlers. The events stay on the aggregate until a later dispatch or `clearMarkedAggregates()`
+- A dispatch that is still running does not deliver those same events again. An event raised while the handlers run stays pending for a later dispatch
+- A handler that throws, including a synchronous throw, rejects the dispatch with `AggregateError` and the message `Domain event handlers failed.`
 
 ## DomainEvent shape
 
 ```ts
-import type { DomainEvent, UniqueEntityId } from "archstone/core"
+import type { DomainEvent, EntityId } from "archstone/core"
 
 class UserCreatedEvent implements DomainEvent {
   occurredAt = new Date()
   constructor(public readonly user: User) {}
-  getAggregateId(): UniqueEntityId {
+  getAggregateId(): EntityId {
     return this.user.id
   }
 }
@@ -28,11 +30,11 @@ class UserCreatedEvent implements DomainEvent {
 ## Raising Events (inside aggregate)
 
 ```ts
+import type { EntityId, Optional } from "archstone/core"
+import { UniqueEntityId } from "@/core/unique-entity-id"
+
 class User extends AggregateRoot<UserProps> {
-  static create(
-    props: Optional<UserProps, "createdAt">,
-    id?: UniqueEntityId
-  ): User {
+  static create(props: Optional<UserProps, "createdAt">, id?: EntityId): User {
     const user = new User(
       { ...props, createdAt: props.createdAt ?? new Date() },
       id ?? new UniqueEntityId()
@@ -69,7 +71,7 @@ class OnUserCreated implements EventHandler<UserCreatedEvent> {
 ```ts
 async create(user: User): Promise<void> {
   await this.db.insert(user)
-  DomainEvents.dispatchEventsForAggregate(user.id) // UniqueEntityId, not string
+  await DomainEvents.dispatchEventsForAggregate(user.id) // EntityId, not string
 }
 ```
 
@@ -84,15 +86,15 @@ new OnUserCreated(mailer)
 
 ```ts
 // ❌ dispatching before persisting
-DomainEvents.dispatchEventsForAggregate(user.id)
+await DomainEvents.dispatchEventsForAggregate(user.id)
 await this.db.insert(user) // wrong order
 
 // ❌ passing string
-DomainEvents.dispatchEventsForAggregate(user.id.toValue()) // use UniqueEntityId
+DomainEvents.dispatchEventsForAggregate(user.id.toValue()) // use EntityId
 
 // ❌ calling clearEvents() manually
 user.clearEvents() // dispatchEventsForAggregate handles this
 
-// ❌ importing from enterprise (deprecated, non-generic EventHandler)
+// ❌ EventHandler is exported from archstone/core
 import { EventHandler } from "archstone/domain/enterprise"
 ```

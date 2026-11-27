@@ -15,11 +15,12 @@
 ## Contract Example
 
 ```ts
-import type { Repository, Creatable } from "archstone/domain/application"
+import type { Maybe } from "archstone/core"
+import type { Creatable, Repository } from "archstone/domain/application"
 
-// Full CRUD + custom method (custom methods may return T | null)
+// Full CRUD + custom finder (custom finders return Maybe, like findById)
 export interface UserRepository extends Repository<User> {
-  findByEmail(email: string): Promise<User | null>
+  findByEmail(email: string): Promise<Maybe<User>>
 }
 
 // Compose only what you need
@@ -40,7 +41,8 @@ export class InMemoryUserRepository implements UserRepository {
   }
 
   async findByEmail(email: string) {
-    return this.items.find((u) => u.email.value === email) ?? null
+    const user = this.items.find((u) => u.email.value === email)
+    return user ? just(user) : nothing()
   }
 
   async create(user: User) {
@@ -64,7 +66,7 @@ export class InMemoryUserRepository implements UserRepository {
 // ❌ concrete class in use case
 constructor(private repo: PrismaUserRepository) {}
 
-// ❌ UniqueEntityId to findById
+// ❌ EntityId to findById
 await repo.findById(user.id) // wrong
 await repo.findById(user.id.toValue()) // correct
 
