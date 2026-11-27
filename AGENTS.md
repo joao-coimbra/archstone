@@ -219,16 +219,16 @@ bun x skills add joao-coimbra/archstone
 
 Nothing in this layer may import from `domain/`.
 
-| Export               | Purpose                                                                   |
-| -------------------- | ------------------------------------------------------------------------- |
-| `Either<L, R>`       | Discriminated union for type-safe error handling                          |
-| `ValueObject<Props>` | Immutable objects defined by attributes                                   |
-| `UniqueEntityId`     | UUID v7 wrapper. New ids use `crypto.getRandomValues`, on Bun and on Node |
-| `WatchedList<T>`     | Collection that tracks additions/removals                                 |
-| `DomainEvent`        | Marker interface for domain events                                        |
-| `DomainEvents`       | Central registry and dispatcher — singleton                               |
-| `EventHandler<T>`    | Generic interface for side-effect handlers                                |
-| `Optional<T, K>`     | Utility type to make specific props optional                              |
+| Export               | Purpose                                          |
+| -------------------- | ------------------------------------------------ |
+| `Either<L, R>`       | Discriminated union for type-safe error handling |
+| `ValueObject<Props>` | Immutable objects defined by attributes          |
+| `UniqueEntityId`     | UUID v7 wrapper for entity identity              |
+| `WatchedList<T>`     | Collection that tracks additions/removals        |
+| `DomainEvent`        | Marker interface for domain events               |
+| `DomainEvents`       | Central registry and dispatcher — singleton      |
+| `EventHandler<T>`    | Generic interface for side-effect handlers       |
+| `Optional<T, K>`     | Utility type to make specific props optional     |
 
 - Use `right(value)` / `left(error)`; never throw inside a use case
 - `DomainEvents.dispatchEventsForAggregate()` takes a `UniqueEntityId` and returns `Promise<void>` — await it, and never pass `.toValue()`
