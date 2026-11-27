@@ -67,7 +67,7 @@ That function works until the project grows. The problems are in the shape of th
 - The signature does not say that the email can be taken or invalid. The caller has to read the body to know about `throw`.
 - `"ada@example.com"` and `"not-an-email"` are both `string`. The lowercase rule lives in this function, so the next function can forget it.
 - `db` and `mailer` are concrete. A test has to provide both, and a mailer failure happens after the user is already inserted.
-- `id` is a `string`. `findById` cannot tell a user id from any other string.
+- `id` is a plain `string` created in the function. It has no shared format and no `equals()`.
 
 The rest of this tutorial replaces that function with a use case, one file at a time.
 
@@ -101,7 +101,7 @@ export class UserAlreadyExistsError implements UseCaseError {
 
 ## 3. Return both outcomes with `Either`
 
-`left(error)` builds the failure. `right(value)` builds the success. Read `.value` inside the branch that called `isLeft()` or `isRight()`. TypeScript narrows `.value` there. It does not narrow the other branch, including the code after an early return.
+`left(error)` builds the failure. `right(value)` builds the success. Read `.value` in the branch where `isRight()` or `isLeft()` is true. TypeScript narrows `.value` in that branch only. The other branch keeps both types, and so does the code after an early return.
 
 ```ts
 import { type Either, left, right } from "archstone/core"
@@ -127,6 +127,8 @@ if (result.isRight()) {
   console.log(result.value)
 }
 ```
+
+A bare `else` is the other branch, so it does not narrow `.value`. `.message` is available only inside `isLeft()`.
 
 > **What `Either` changes**
 > The return type lists the failure. The caller branches on `isLeft()` or `isRight()`. Ignoring the result is still possible, but the failure is no longer hidden inside `throw`.
@@ -306,7 +308,7 @@ export interface UserRepository extends Repository<User> {
 
 Two details are easy to miss:
 
-- `findById` takes the string from `user.id.toValue()`, and it returns `Maybe<T>`. `isNothing()` means absent. `isJust()` means present, and `.value` is the entity. A `Maybe` is always an object, so `if (!user)` does not mean "missing".
+- `findById` takes the string from `user.id.toValue()`, and it returns `Maybe<T>`. `isJust()` means the entity is present, and `.value` is that entity inside the `isJust()` branch. `isNothing()` means it is absent. Code after `isNothing()` still types `.value` as `T | undefined`. A `Maybe` is always an object, so `if (!user)` does not mean "missing".
 - `delete` takes the entity, not an id.
 
 A custom query may return `T | null`. `findByEmail` returns `Maybe<User>` so this feature has one way to represent absence.
@@ -368,9 +370,9 @@ export class RegisterUserUseCase
 }
 ```
 
-The lookup uses `emailAddress.value`, the normalized text. Searching with the raw input would miss `Ada@Example.com` after the first save stored `ada@example.com`.
+The lookup uses `emailAddress.value`, the normalized text. Searching with the raw input would miss `Ada@Example.com` after the first save stored `ada@example.com`. `isJust()` only means a user is already stored. This use case does not need that user, so it does not read `.value`.
 
-The success path sits inside `isRight()`, and the known failure sits inside `isLeft()`. The final `return` is there because `Either` is an abstract class: TypeScript does not treat those two checks as exhaustive. `Email.create` still only returns a left or a right.
+The email is read inside `isRight()`, where `.value` is an `Email`. The validation error is returned inside `isLeft()`, where `.value` is that error. TypeScript does not narrow the lines after either check, and it does not treat the two checks as exhaustive. The method therefore ends by building an `InvalidEmailError`. `Email.create` always returns one side or the other, so that last return does not run.
 
 The class receives `UserRepository`, not a database client. It returns the user or one of the two errors. The welcome email is not here. The aggregate already recorded that a user was created. The next section reacts to that record.
 
@@ -564,6 +566,8 @@ test("rejects a duplicate email", async () => {
 ```
 
 `ADA@example.com` matches the stored `ada@example.com` because `Email.create` normalizes before the lookup.
+
+`expect(result.isRight())` does not change the type. `.value` is the user inside `if (result.isRight())`, and it is the error inside `if (result.isLeft())`.
 
 ---
 
