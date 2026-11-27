@@ -27,12 +27,12 @@ core                    results, identity, equality, and domain events
 
 Each layer depends only on the layers below it. Archstone ships `core`, `enterprise`, and `application`. You write the infrastructure.
 
-| Layer | What you get |
-| --- | --- |
-| `archstone/core` | `Either`, `Maybe`, `ValueObject`, `UniqueEntityId`, `WatchedList`, domain events |
-| `archstone/domain/enterprise` | `Entity`, `AggregateRoot` |
-| `archstone/domain/application` | `UseCase`, `UseCaseError`, repository interfaces |
-| `archstone` | Every public export |
+| Layer                          | What you get                                                                     |
+| ------------------------------ | -------------------------------------------------------------------------------- |
+| `archstone/core`               | `Either`, `Maybe`, `ValueObject`, `UniqueEntityId`, `WatchedList`, domain events |
+| `archstone/domain/enterprise`  | `Entity`, `AggregateRoot`                                                        |
+| `archstone/domain/application` | `UseCase`, `UseCaseError`, repository interfaces                                 |
+| `archstone`                    | Every public export                                                              |
 
 Import from these entry points. They are the supported public API.
 
