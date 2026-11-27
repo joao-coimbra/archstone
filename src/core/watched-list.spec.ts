@@ -64,4 +64,43 @@ describe("Watched List", () => {
     expect(list.getRemovedItems()).toEqual([2])
     expect(list.getNewItems()).toEqual([5])
   })
+
+  it("keeps the diff against the list it was created with", () => {
+    const list = new NumberWatchedList([1, 2, 3])
+
+    list.update([1, 3, 5])
+    list.update([1, 5])
+
+    expect(list.getItems()).toEqual([1, 5])
+    expect(list.getRemovedItems()).toEqual([2, 3])
+    expect(list.getNewItems()).toEqual([5])
+  })
+
+  it("does not track mutations of the array given to the constructor", () => {
+    const initial = [1, 2, 3]
+    const list = new NumberWatchedList(initial)
+
+    initial.push(4)
+
+    expect(list.getItems()).toEqual([1, 2, 3])
+    expect(list.getNewItems()).toEqual([])
+  })
+
+  it("does not track mutations of the array returned by getItems", () => {
+    const list = new NumberWatchedList([1])
+
+    list.getItems().push(2)
+
+    expect(list.getItems()).toEqual([1])
+    expect(list.getNewItems()).toEqual([])
+  })
+
+  it("ignores removal of an item that is not in the list", () => {
+    const list = new NumberWatchedList([1, 2, 3])
+
+    list.remove(9)
+
+    expect(list.getItems()).toEqual([1, 2, 3])
+    expect(list.getRemovedItems()).toEqual([])
+  })
 })

@@ -50,6 +50,6 @@ beforeEach(() => {
   DomainEvents.shouldRun = true
 })
 
-// Suppress dispatch without clearing registered handlers:
+// Skip dispatch and keep the events on the aggregate:
 // DomainEvents.shouldRun = false
 ```

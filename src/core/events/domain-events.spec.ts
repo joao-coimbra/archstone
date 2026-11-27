@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, mock } from "bun:test"
 import type { DomainEvent, UniqueEntityId } from "@/core/index"
-import { DomainEvents } from "@/core/index"
+import { DomainEvents, UniqueEntityId as EntityId } from "@/core/index"
 import { AggregateRoot } from "@/domain/enterprise/index"
 
 class CustomAggregateCreated implements DomainEvent {
@@ -25,6 +25,14 @@ class CustomAggregate extends AggregateRoot<null> {
 
     return aggregate
   }
+
+  static createWith(id: UniqueEntityId) {
+    const aggregate = new CustomAggregate(null, id)
+
+    aggregate.addDomainEvent(new CustomAggregateCreated(aggregate))
+
+    return aggregate
+  }
 }
 
 describe("Domain Events", () => {
@@ -34,7 +42,7 @@ describe("Domain Events", () => {
     DomainEvents.shouldRun = true
   })
 
-  it("should be able to dispatch and listen to events", () => {
+  it("should be able to dispatch and listen to events", async () => {
     const callbackSpy = mock()
 
     // Subscriber registered (listening to the "response created" event)
@@ -47,7 +55,7 @@ describe("Domain Events", () => {
     expect(aggregate.domainEvents).toHaveLength(1)
 
     // Saving the response to the database, which triggers the event
-    DomainEvents.dispatchEventsForAggregate(aggregate.id)
+    await DomainEvents.dispatchEventsForAggregate(aggregate.id)
 
     // The subscriber listens to the event and does what it needs with the data
     expect(callbackSpy).toHaveBeenCalled()
@@ -55,7 +63,7 @@ describe("Domain Events", () => {
     expect(aggregate.domainEvents).toHaveLength(0)
   })
 
-  it("should not dispatch events when shouldRun is false", () => {
+  it("should not dispatch events when shouldRun is false", async () => {
     const callbackSpy = mock()
 
     DomainEvents.register(callbackSpy, CustomAggregateCreated.name)
@@ -63,8 +71,86 @@ describe("Domain Events", () => {
 
     const aggregate = CustomAggregate.create()
 
-    DomainEvents.dispatchEventsForAggregate(aggregate.id)
+    await DomainEvents.dispatchEventsForAggregate(aggregate.id)
 
     expect(callbackSpy).not.toHaveBeenCalled()
+    expect(aggregate.domainEvents).toHaveLength(1)
+  })
+
+  it("keeps the event until every handler has finished", async () => {
+    const aggregate = CustomAggregate.create()
+    let pendingWhileHandling = 0
+
+    DomainEvents.register(async () => {
+      await Promise.resolve()
+      pendingWhileHandling = aggregate.domainEvents.length
+    }, CustomAggregateCreated.name)
+
+    await DomainEvents.dispatchEventsForAggregate(aggregate.id)
+
+    expect(pendingWhileHandling).toBe(1)
+    expect(aggregate.domainEvents).toHaveLength(0)
+  })
+
+  it("keeps the event when a handler rejects", async () => {
+    const aggregate = CustomAggregate.create()
+
+    DomainEvents.register(
+      () => Promise.reject(new Error("handler failed")),
+      CustomAggregateCreated.name
+    )
+
+    await expect(
+      DomainEvents.dispatchEventsForAggregate(aggregate.id)
+    ).rejects.toThrow("Domain event handlers failed.")
+    expect(aggregate.domainEvents).toHaveLength(1)
+  })
+
+  it("does not run a handler registered during the current dispatch", async () => {
+    const aggregate = CustomAggregate.create()
+    let calls = 0
+    const callback = (): Promise<void> => {
+      calls += 1
+      if (calls < 5) {
+        DomainEvents.register(callback, CustomAggregateCreated.name)
+      }
+      return Promise.resolve()
+    }
+
+    DomainEvents.register(callback, CustomAggregateCreated.name)
+
+    await DomainEvents.dispatchEventsForAggregate(aggregate.id)
+
+    expect(calls).toBe(1)
+  })
+
+  it("dispatches every marked instance that shares an id", async () => {
+    const id = new EntityId("same-id")
+    const first = CustomAggregate.createWith(id)
+    const second = CustomAggregate.createWith(id)
+    let calls = 0
+
+    DomainEvents.register((): Promise<void> => {
+      calls += 1
+      return Promise.resolve()
+    }, CustomAggregateCreated.name)
+
+    await DomainEvents.dispatchEventsForAggregate(id)
+
+    expect(calls).toBe(2)
+    expect(first.domainEvents).toHaveLength(0)
+    expect(second.domainEvents).toHaveLength(0)
+  })
+
+  it("stops calling a handler after unregister", async () => {
+    const aggregate = CustomAggregate.create()
+    const callback = mock()
+
+    DomainEvents.register(callback, CustomAggregateCreated.name)
+    DomainEvents.unregister(callback, CustomAggregateCreated.name)
+
+    await DomainEvents.dispatchEventsForAggregate(aggregate.id)
+
+    expect(callback).not.toHaveBeenCalled()
   })
 })

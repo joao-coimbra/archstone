@@ -78,7 +78,8 @@
     "prepare": "lefthook install",
     "prepublishOnly": "bun run build",
     "release": "bun publish --access public",
-    "test": "bun test"
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "failcraft": "^1.4.3"

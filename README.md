@@ -127,13 +127,13 @@ class GetUser implements UseCase<Input, Output> {
 
 **UniqueEntityId.** UUID v7. `toValue()` is the string you pass to `findById`. `equals()` compares two ids.
 
-**WatchedList.** Subclass it, implement `compareItems`, then read `getNewItems()` and `getRemovedItems()` when saving.
+**WatchedList.** Subclass it, implement `compareItems`, then read `getNewItems()` and `getRemovedItems()`. Both are measured against the list the collection was created with. `update()` replaces the items and recomputes that same diff. The getters return copies.
 
 **UseCase.** A class whose `execute(input)` returns `Promise<Either<...>>` or `Promise<Maybe<...>>`. Repositories are constructor arguments, typed as interfaces.
 
 **Repository.** An interface next to the use case. Extend `Repository<T>` for the full set, or only `Findable`, `Creatable`, `Saveable`, or `Deletable`. `delete` receives the entity. The class that talks to the database implements the interface in your infrastructure.
 
-**Domain events.** Raise the event inside the aggregate. After a successful save, call `DomainEvents.dispatchEventsForAggregate(aggregate.id)`. A handler implements `EventHandler<T>` from `archstone/core`.
+**Domain events.** Raise the event inside the aggregate. After a successful save, `await DomainEvents.dispatchEventsForAggregate(aggregate.id)`. The call finishes when the handlers have settled, then clears the events. A rejected handler leaves the events in place. A handler implements `EventHandler<T>` from `archstone/core`.
 
 ## For coding agents
 

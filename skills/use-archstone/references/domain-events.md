@@ -6,10 +6,10 @@
 - Dispatch **after** successful persistence — never before
 - Define handlers as classes implementing `EventHandler<T>` from `archstone/core` with `setupSubscriptions()` and `handle(event: T)`
 - Call `setupSubscriptions()` in the constructor — just instantiate the handler in the composition root
-- Dispatch via `DomainEvents.dispatchEventsForAggregate(aggregate.id)` — argument is `UniqueEntityId`
-- `clearEvents()` is called internally by `dispatchEventsForAggregate` — do not call manually
+- Dispatch via `await DomainEvents.dispatchEventsForAggregate(aggregate.id)` — argument is `UniqueEntityId`, and the promise settles when every handler for that save has settled
+- `clearEvents()` runs only after those handlers settle — do not call it manually. A rejected handler rejects the dispatch and leaves the events in place
 - Test isolation: `DomainEvents.clearHandlers()`, `DomainEvents.clearMarkedAggregates()`, and reset `DomainEvents.shouldRun = true`
-- Set `DomainEvents.shouldRun = false` to suppress dispatch without clearing handlers
+- Set `DomainEvents.shouldRun = false` to skip dispatch without clearing handlers. The events stay on the aggregate until a later dispatch or `clearMarkedAggregates()`
 
 ## DomainEvent shape
 
@@ -69,7 +69,7 @@ class OnUserCreated implements EventHandler<UserCreatedEvent> {
 ```ts
 async create(user: User): Promise<void> {
   await this.db.insert(user)
-  DomainEvents.dispatchEventsForAggregate(user.id) // UniqueEntityId, not string
+  await DomainEvents.dispatchEventsForAggregate(user.id) // UniqueEntityId, not string
 }
 ```
 
@@ -84,7 +84,7 @@ new OnUserCreated(mailer)
 
 ```ts
 // ❌ dispatching before persisting
-DomainEvents.dispatchEventsForAggregate(user.id)
+await DomainEvents.dispatchEventsForAggregate(user.id)
 await this.db.insert(user) // wrong order
 
 // ❌ passing string
@@ -93,6 +93,6 @@ DomainEvents.dispatchEventsForAggregate(user.id.toValue()) // use UniqueEntityId
 // ❌ calling clearEvents() manually
 user.clearEvents() // dispatchEventsForAggregate handles this
 
-// ❌ importing from enterprise (deprecated, non-generic EventHandler)
+// ❌ EventHandler is exported from archstone/core
 import { EventHandler } from "archstone/domain/enterprise"
 ```

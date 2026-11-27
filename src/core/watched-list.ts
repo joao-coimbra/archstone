@@ -38,8 +38,9 @@ export abstract class WatchedList<T> {
   protected removed: T[]
 
   constructor(initialItems?: T[]) {
-    this.currentItems = initialItems ?? []
-    this.initial = initialItems ?? []
+    const items = initialItems?.slice() ?? []
+    this.currentItems = items
+    this.initial = items.slice()
     this.new = []
     this.removed = []
   }
@@ -58,21 +59,21 @@ export abstract class WatchedList<T> {
    * Returns all current items in the list.
    */
   getItems(): T[] {
-    return this.currentItems
+    return this.currentItems.slice()
   }
 
   /**
    * Returns items that were added since the list was created.
    */
   getNewItems(): T[] {
-    return this.new
+    return this.new.slice()
   }
 
   /**
    * Returns items that were removed since the list was created.
    */
   getRemovedItems(): T[] {
-    return this.removed
+    return this.removed.slice()
   }
 
   /**
@@ -108,30 +109,39 @@ export abstract class WatchedList<T> {
    * @param item - The item to remove
    */
   remove(item: T): void {
+    if (!this.isCurrentItem(item)) {
+      return
+    }
     this.removeFromCurrent(item)
     if (this.isNewItem(item)) {
       this.removeFromNew(item)
       return
     }
-    if (!this.isRemovedItem(item)) {
-      this.removed.push(item)
+    if (this.isRemovedItem(item)) {
+      return
     }
+    this.removed.push(item)
   }
 
   /**
    * Replaces the entire list with a new set of items, automatically
    * computing what was added and what was removed.
    *
+   * The diff is always against the items the list was created with.
+   * A later `update()` does not treat the previous current list as the baseline.
+   *
    * @param items - The new set of items
    */
   update(items: T[]): void {
-    this.new = items.filter(
-      (a) => !this.getItems().some((b) => this.compareItems(a, b))
+    const next = items.slice()
+    this.currentItems = next
+    this.new = next.filter(
+      (item) =>
+        !this.initial.some((initial) => this.compareItems(item, initial))
     )
-    this.removed = this.getItems().filter(
-      (a) => !items.some((b) => this.compareItems(a, b))
+    this.removed = this.initial.filter(
+      (initial) => !next.some((item) => this.compareItems(initial, item))
     )
-    this.currentItems = items
   }
 
   private isCurrentItem(item: T): boolean {

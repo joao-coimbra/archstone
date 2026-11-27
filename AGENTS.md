@@ -231,11 +231,11 @@ Nothing in this layer may import from `domain/`.
 | `Optional<T, K>`     | Utility type to make specific props optional     |
 
 - Use `right(value)` / `left(error)`; never throw inside a use case
-- `DomainEvents.dispatchEventsForAggregate()` takes a `UniqueEntityId` — never `.toValue()`
+- `DomainEvents.dispatchEventsForAggregate()` takes a `UniqueEntityId` and returns `Promise<void>` — await it, and never pass `.toValue()`
 - `Findable.findById()` takes a `string` — pass `id.toValue()`; returns `Promise<Maybe<T>>` — use `.isNothing()` / `.value`
 - Import `DomainEvent` / `DomainEvents` / `EventHandler<T>` from `archstone/core`
 - In tests: `DomainEvents.clearHandlers()`, `clearMarkedAggregates()`, reset `shouldRun = true`
-- Set `DomainEvents.shouldRun = false` to suppress dispatch without clearing handlers
+- Set `DomainEvents.shouldRun = false` to skip dispatch without clearing handlers or events. The events stay until a later dispatch with `shouldRun` true, or until `clearMarkedAggregates()`
 
 ---
 

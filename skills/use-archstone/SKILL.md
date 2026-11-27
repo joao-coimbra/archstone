@@ -47,7 +47,7 @@ Define as interfaces only. Use `Repository<T>` or compose `Findable`, `Creatable
 
 ## Domain Events
 
-Raise inside the aggregate via `addDomainEvent()`. Dispatch after persistence via `DomainEvents.dispatchEventsForAggregate(aggregate.id)`. Handlers implement `EventHandler<T>` from `archstone/core`. In tests, use `clearHandlers` / `clearMarkedAggregates` / `shouldRun`. See [Domain Event Patterns](references/domain-events.md).
+Raise inside the aggregate via `addDomainEvent()`. After persistence, `await DomainEvents.dispatchEventsForAggregate(aggregate.id)`. The events are cleared only after the handlers settle. Handlers implement `EventHandler<T>` from `archstone/core`. In tests, use `clearHandlers` / `clearMarkedAggregates` / `shouldRun`. See [Domain Event Patterns](references/domain-events.md).
 
 ## WatchedList
 

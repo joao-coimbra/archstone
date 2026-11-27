@@ -1,4 +1,12 @@
-import { randomUUIDv7 } from "bun"
+const createUuidV7 = (): string => {
+  const generate = globalThis.Bun?.randomUUIDv7
+  if (!generate) {
+    throw new Error(
+      "UniqueEntityId requires Bun.randomUUIDv7 to generate an id."
+    )
+  }
+  return generate()
+}
 
 /**
  * Represents a unique identifier for a domain entity.
@@ -19,7 +27,10 @@ export class UniqueEntityId {
   private readonly value: string
 
   constructor(value?: string) {
-    this.value = value ?? randomUUIDv7()
+    if (value !== undefined && value.trim() === "") {
+      throw new Error("UniqueEntityId cannot be blank.")
+    }
+    this.value = value ?? createUuidV7()
   }
 
   /**

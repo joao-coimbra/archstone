@@ -414,18 +414,18 @@ new OnUserCreated(mailer)
 
 ### Dispatch from the repository
 
-Call `dispatchEventsForAggregate` after the write succeeds. The argument is `user.id`, the `UniqueEntityId`. The method starts the handlers, then clears the aggregate's events.
+Call `await dispatchEventsForAggregate` after the write succeeds. The argument is `user.id`, the `UniqueEntityId`. The method runs the handlers, and clears the aggregate's events only after they settle. A rejected handler rejects the call and leaves the events in place.
 
 ```ts
 import { DomainEvents } from "archstone/core"
 
 async create(user: User): Promise<void> {
   await this.database.insert(user)
-  DomainEvents.dispatchEventsForAggregate(user.id)
+  await DomainEvents.dispatchEventsForAggregate(user.id)
 }
 ```
 
-`dispatchEventsForAggregate` starts the handlers and does not wait for them. The insert is already done. The welcome email is not part of the use case result.
+`await dispatchEventsForAggregate` waits until the handlers for that save have settled. The insert is already done. The welcome email is not part of the use case result.
 
 > **Why dispatch comes after the insert**
 > The event means "a user was stored". Dispatching after the insert keeps the email on that side of the write. `clearEvents()` belongs to the dispatcher. Do not call it from the use case.
@@ -443,7 +443,7 @@ beforeEach(() => {
 })
 ```
 
-`shouldRun = false` keeps the handlers registered and skips dispatch. Use that when a test builds aggregates and wants no side effects. Set it back to `true` afterwards.
+`shouldRun = false` keeps the handlers registered and skips dispatch. The events stay on the aggregate. Use that when a test builds aggregates and wants no side effects. Set it back to `true` afterwards, then dispatch if the test should deliver those events.
 
 ---
 
@@ -503,13 +503,13 @@ class InMemoryUserRepository implements UserRepository {
 
   async create(user: User) {
     this.items.push(user)
-    DomainEvents.dispatchEventsForAggregate(user.id)
+    await DomainEvents.dispatchEventsForAggregate(user.id)
   }
 
   async save(user: User) {
     const index = this.items.findIndex((item) => item.id.equals(user.id))
     if (index >= 0) this.items[index] = user
-    DomainEvents.dispatchEventsForAggregate(user.id)
+    await DomainEvents.dispatchEventsForAggregate(user.id)
   }
 
   async delete(user: User) {
@@ -607,15 +607,15 @@ const added = user.roles.getNewItems()
 const removed = user.roles.getRemovedItems()
 ```
 
-| Method              | Behavior                                                                                      |
-| ------------------- | --------------------------------------------------------------------------------------------- |
-| `getItems()`        | The current items                                                                             |
-| `getNewItems()`     | Items added that were not in the initial list                                                 |
-| `getRemovedItems()` | Initial items that have been removed                                                          |
-| `exists(item)`      | Whether the item is in the current list                                                       |
-| `add(item)`         | Adds the item. A brand-new item is tracked as new. An item that was only removed is restored  |
-| `remove(item)`      | Removes the item. An initial item is tracked as removed. An item that was only new is dropped |
-| `update(items)`     | Replaces the list and recomputes the diff                                                     |
+| Method              | Behavior                                                                                            |
+| ------------------- | --------------------------------------------------------------------------------------------------- |
+| `getItems()`        | The current items                                                                                   |
+| `getNewItems()`     | Items added that were not in the initial list                                                       |
+| `getRemovedItems()` | Initial items that have been removed                                                                |
+| `exists(item)`      | Whether the item is in the current list                                                             |
+| `add(item)`         | Adds the item. A brand-new item is tracked as new. An item that was only removed is restored        |
+| `remove(item)`      | Removes the item. An initial item is tracked as removed. An item that was only new is dropped       |
+| `update(items)`     | Replaces the current items and recomputes the diff against the list the collection was created with |
 
 An item in the initial list is not reported by `getNewItems()` when you add it again. Removing an item that was added in this same session drops it from `getNewItems()` and does not report it as removed.
 
