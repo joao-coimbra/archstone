@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { EntityId } from "./entity-id"
+import { EntityId, UniqueEntityId } from "./entity-id"
 
 describe("EntityId", () => {
   it("keeps a provided identifier", () => {
@@ -21,5 +21,13 @@ describe("EntityId", () => {
 
     expect(left.equals(right)).toBe(true)
     expect(left.equals(other)).toBe(false)
+  })
+
+  it("keeps UniqueEntityId as the same constructor", () => {
+    const stored = new UniqueEntityId("stored")
+
+    expect(UniqueEntityId).toBe(EntityId)
+    expect(stored).toBeInstanceOf(EntityId)
+    expect(new EntityId("stored").equals(stored)).toBe(true)
   })
 })

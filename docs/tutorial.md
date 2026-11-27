@@ -220,6 +220,8 @@ generated.equals(stored) // false
 
 `User.create()` calls `new UniqueEntityId()` when you are registering someone new, and you pass an existing id when you rebuild a user from a saved row. `Entity` requires that id. It does not create one.
 
+Archstone still exports `UniqueEntityId`, marked deprecated, as another name for `EntityId`. Do not import that one. It requires a string and does not generate an id. The class above is yours.
+
 ---
 
 ## 6. Model the user

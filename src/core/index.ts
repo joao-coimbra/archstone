@@ -13,7 +13,7 @@ export {
   type Right,
   right,
 } from "failcraft"
-export { EntityId } from "./entity-id"
+export { EntityId, UniqueEntityId } from "./entity-id"
 export * from "./events/index"
 export * from "./types/index"
 export { ValueObject } from "./value-object"

@@ -53,3 +53,27 @@ export class EntityId {
     return id.toValue() === this.value
   }
 }
+
+/**
+ * @deprecated `UniqueEntityId` no longer generates an id. It is the same
+ * constructor as {@link EntityId} and requires the string. Extend `EntityId`
+ * in the project and put generation in that constructor.
+ *
+ * @example
+ * ```ts
+ * import { randomUUID } from "node:crypto"
+ * import { EntityId } from "archstone/core"
+ *
+ * export class UniqueEntityId extends EntityId {
+ *   constructor(value: string = randomUUID()) {
+ *     super(value)
+ *   }
+ * }
+ * ```
+ */
+export const UniqueEntityId: typeof EntityId = EntityId
+
+/**
+ * @deprecated Use {@link EntityId}. Generation belongs in a project subclass.
+ */
+export type UniqueEntityId = EntityId

@@ -233,6 +233,7 @@ Nothing in this layer may import from `domain/`.
 - Use `right(value)` / `left(error)`; never throw inside a use case
 - `DomainEvents.dispatchEventsForAggregate()` takes an `EntityId` and returns `Promise<void>` — await it, and never pass `.toValue()`
 - `EntityId` stores a string and does not generate one. Extend it in the consumer project as `UniqueEntityId` and put generation in that constructor. The domain owns the id even when the database can assign a key
+- `UniqueEntityId` stays exported as a deprecated alias of `EntityId`. It requires a string and does not generate one. New code does not import it from Archstone
 - `Findable.findById()` takes a `string` — pass `id.toValue()`; returns `Promise<Maybe<T>>` — use `.isNothing()` / `.value`
 - Import `DomainEvent` / `DomainEvents` / `EventHandler<T>` from `archstone/core`
 - In tests: `DomainEvents.clearHandlers()`, `clearMarkedAggregates()`, reset `shouldRun = true`

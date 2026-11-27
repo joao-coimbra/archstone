@@ -5,7 +5,7 @@
 - Import from `archstone/core`, `archstone/domain/enterprise`, or `archstone/domain/application` — never deep paths
 - Extend `Entity<Props>` or `AggregateRoot<Props>` for domain entities
 - Extend `ValueObject<Props>` for value objects
-- Use `EntityId` for entity identity — never `string`. Extend it in the project as `UniqueEntityId` and generate the value there
+- Use `EntityId` for entity identity — never `string`. Extend it in the project as `UniqueEntityId` and generate the value there. The `UniqueEntityId` exported by Archstone is deprecated and does not generate an id
 - Use static `create()` factory — never instantiate directly
 - Return `Either<UseCaseError, Value>` or `Maybe<Value>` from use cases — never throw
 - Treat `Findable.findById` as `Promise<Maybe<T>>` — use `.isNothing()` / `.value`
