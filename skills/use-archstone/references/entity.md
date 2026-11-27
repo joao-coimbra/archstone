@@ -7,7 +7,7 @@
 - Always use a static `create()` factory — constructor stays `protected`
 - Identity is the **second constructor argument** (`id?: UniqueEntityId`) — do **not** put `id` inside `Props`
 - Use `Optional<T, K>` for auto-generated fields in props (e.g. `"createdAt"`)
-- Use `UniqueEntityId` (UUID v7 via Bun) — never a plain `string` as identity. A blank string throws. Generating an id needs Bun; reconstructing one from a stored string does not, and the module must not import `bun` at load time
+- Use `UniqueEntityId` (UUID v7) — never a plain `string` as identity. A blank string throws. A new id is generated with `crypto.getRandomValues`, on Bun and on Node. Reconstructing one from a stored string does not generate anything
 - `id.toValue()` / `id.toString()` for the raw string; `id.equals(other)` for comparison
 
 ## Entity Example
