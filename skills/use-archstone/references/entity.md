@@ -8,7 +8,7 @@
 - Identity is the **second constructor argument** (`id: EntityId`) — do **not** put `id` inside `Props`. `Entity` does not generate one
 - Use `Optional<T, K>` for auto-generated fields in props (e.g. `"createdAt"`)
 - `EntityId` and `EntityId.withDefault(fn)` ship in 1.6.0. `new EntityId()` stores no id. `new EntityId(value)` stores that string. A blank string throws. Omitting the id on insert lets the database assign the key. Do not use `null`: an explicit NULL skips the database default
-- `EntityId.withDefault(fn)` returns the `EntityId` class. Omitting the argument stores `fn()`. Passing a string stores that string. The project defines its own constructor with that class. The entity factory uses `id ?? new UniqueEntityId()` when `UniqueEntityId` is that constructor
+- `EntityId.withDefault(fn)` returns an `EntityId` class whose `toValue()` is `string`. Omitting the argument stores `fn()`. Passing a string stores that string. The value is never `undefined`. The project defines its own constructor with that class. The entity factory uses `id ?? new UniqueEntityId()` when `UniqueEntityId` is that constructor
 - The `UniqueEntityId` exported by Archstone is deprecated and will be removed in 2.0. Until then `new UniqueEntityId()` still generates a UUID v7 with `Bun.randomUUIDv7`. New code does not import `UniqueEntityId` from Archstone
 - `id.toValue()` / `id.toString()` for the raw string; `id.equals(other)` for comparison
 

@@ -193,7 +193,7 @@ if (first.isRight() && second.isRight()) {
 
 `new EntityId()` stores no id. `toValue()` is `undefined`, so the insert omits that column and the database assigns the key. `new EntityId(value)` stores that string. A blank string throws. Use `undefined` for a missing key. `null` is a value the driver writes, and a NULL column does not take the database default.
 
-When the domain should assign the id, `EntityId.withDefault(fn)` returns the `EntityId` class. Omitting the argument stores `fn()`. Passing a string stores that string.
+When the domain should assign the id, `EntityId.withDefault(fn)` returns an `EntityId` class whose `toValue()` is `string`. Omitting the argument stores `fn()`. Passing a string stores that string. The value is never `undefined`.
 
 ```ts
 // src/core/unique-entity-id.ts

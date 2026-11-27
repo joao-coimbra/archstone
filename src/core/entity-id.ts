@@ -11,8 +11,9 @@
  * a missing key: most drivers write NULL and the database default does not
  * run.
  *
- * `withDefault(fn)` returns the {@link EntityId} class. Omitting the
- * argument stores `fn()`. Passing a string stores that string.
+ * `withDefault(fn)` returns an {@link EntityId} class whose `toValue()` is
+ * `string`. Omitting the argument stores `fn()`. Passing a string stores
+ * that string. The value is never `undefined`.
  *
  * @example
  * ```ts
@@ -29,16 +30,21 @@
  * export const UniqueEntityId = EntityId.withDefault(uuidv7)
  * ```
  */
-export class EntityId {
+export class EntityId<Value extends string | undefined = string | undefined> {
   private readonly value: string | undefined
 
   /**
-   * Returns the {@link EntityId} class, filling a missing id with `generate()`.
+   * Returns an {@link EntityId} class that always has a string id.
+   * A missing argument is filled with `generate()`. `toValue()` is `string`.
    */
-  static withDefault(generate: () => string): typeof EntityId {
-    return class extends EntityId {
-      constructor(value?: string) {
-        super(value === undefined ? generate() : value)
+  static withDefault(
+    generate: () => string
+  ): new (
+    value?: string
+  ) => EntityId<string> {
+    return class extends EntityId<string> {
+      constructor(value: string = generate()) {
+        super(value)
       }
     }
   }
@@ -54,8 +60,8 @@ export class EntityId {
    * Returns the identifier as a primitive string.
    * `undefined` means the id was not assigned.
    */
-  toValue(): string | undefined {
-    return this.value
+  toValue(): Value {
+    return this.value as Value
   }
 
   /**
@@ -73,7 +79,7 @@ export class EntityId {
    * @param id - The identifier to compare against
    * @returns `true` if both identifiers have the same string value
    */
-  equals(id: EntityId): boolean {
+  equals(id: EntityId<string | undefined>): boolean {
     if (id === this) {
       return true
     }
@@ -102,7 +108,8 @@ const bunUuidV7 = (): string => {
  * defines its own constructor with {@link EntityId.withDefault}.
  * {@link EntityId} and {@link EntityId.withDefault} ship in 1.6.0.
  */
-export const UniqueEntityId: typeof EntityId = EntityId.withDefault(bunUuidV7)
+export const UniqueEntityId: new (value?: string) => EntityId<string> =
+  EntityId.withDefault(bunUuidV7)
 
 /** @deprecated Removed in 2.0. Use {@link EntityId}. */
-export type UniqueEntityId = EntityId
+export type UniqueEntityId = EntityId<string>
