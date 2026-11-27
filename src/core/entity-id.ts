@@ -43,8 +43,8 @@ export class EntityId<Value extends string | undefined = string | undefined> {
     value?: string
   ) => EntityId<string> {
     return class extends EntityId<string> {
-      constructor(value?: string) {
-        super(value ?? generate())
+      constructor(value: string = generate()) {
+        super(value)
       }
     }
   }
