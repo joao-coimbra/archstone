@@ -40,6 +40,24 @@ const recordsEqual = (
   return true
 }
 
+const toValuesEqual = (
+  left: object,
+  right: object,
+  seen: WeakMap<object, object>
+): boolean | undefined => {
+  if (!(hasToValue(left) || hasToValue(right))) {
+    return undefined
+  }
+  if (
+    hasToValue(left) &&
+    hasToValue(right) &&
+    left.constructor === right.constructor
+  ) {
+    return valuesEqual(left.toValue(), right.toValue(), seen)
+  }
+  return false
+}
+
 const valuesEqual = (
   left: unknown,
   right: unknown,
@@ -71,12 +89,9 @@ const valuesEqual = (
     return true
   }
   seen.set(left, right)
-  if (
-    left.constructor === right.constructor &&
-    hasToValue(left) &&
-    hasToValue(right)
-  ) {
-    return valuesEqual(left.toValue(), right.toValue(), seen)
+  const compared = toValuesEqual(left, right, seen)
+  if (compared !== undefined) {
+    return compared
   }
   return recordsEqual(left, right, seen)
 }

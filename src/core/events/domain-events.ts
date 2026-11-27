@@ -23,6 +23,11 @@ const handlerFailures = (results: PromiseSettledResult<void>[]): unknown[] => {
   return failures
 }
 
+interface DispatchBatch {
+  aggregate: DispatchableAggregate
+  events: DomainEvent[]
+}
+
 /**
  * Central registry and dispatcher for domain events.
  *
@@ -47,6 +52,7 @@ const handlerFailures = (results: PromiseSettledResult<void>[]): unknown[] => {
 class DomainEventsImplementation {
   private readonly handlersMap = new Map<string, DomainEventCallback[]>()
   private readonly markedAggregates = new Set<DispatchableAggregate>()
+  private readonly inFlight = new WeakSet<DomainEvent>()
 
   /**
    * Controls whether event dispatching is active.
@@ -73,8 +79,10 @@ class DomainEventsImplementation {
    * clears their events, and removes them from the dispatch list.
    *
    * Handlers for one event run together. The events stay on the aggregate until
-   * every handler for that dispatch has settled. A rejected handler rejects this
-   * call and leaves the events in place.
+   * every handler for that dispatch has settled. A second dispatch started
+   * while those handlers are still running does not deliver the same events
+   * again. An event raised during the handlers stays pending for a later call.
+   * A rejected handler rejects this call and leaves the events in place.
    *
    * When {@link shouldRun} is `false`, this returns without dispatching or
    * clearing, so a later call can still deliver the events.
@@ -87,17 +95,19 @@ class DomainEventsImplementation {
     if (!this.shouldRun) {
       return
     }
-    const aggregates = this.markedAggregatesFor(id)
-    if (aggregates.length === 0) {
+    const batches = this.claim(id)
+    if (batches.length === 0) {
       return
     }
-    await Promise.all(
-      aggregates.map((aggregate) => this.dispatchAggregateEvents(aggregate))
-    )
-    for (const aggregate of aggregates) {
-      aggregate.clearEvents()
-      this.markedAggregates.delete(aggregate)
+    try {
+      await Promise.all(
+        batches.map((batch) => this.dispatchEvents(batch.events))
+      )
+    } catch (error) {
+      this.release(batches)
+      throw error
     }
+    this.finish(batches)
   }
 
   /**
@@ -148,12 +158,48 @@ class DomainEventsImplementation {
     this.markedAggregates.clear()
   }
 
-  private async dispatchAggregateEvents(
-    aggregate: DispatchableAggregate
-  ): Promise<void> {
-    await Promise.all(
-      aggregate.domainEvents.map((event) => this.dispatch(event))
-    )
+  private claim(id: UniqueEntityId): DispatchBatch[] {
+    const batches: DispatchBatch[] = []
+    for (const aggregate of this.markedAggregatesFor(id)) {
+      if (aggregate.domainEvents.length === 0) {
+        this.markedAggregates.delete(aggregate)
+        continue
+      }
+      const events = aggregate.domainEvents.filter(
+        (event) => !this.inFlight.has(event)
+      )
+      if (events.length === 0) {
+        continue
+      }
+      for (const event of events) {
+        this.inFlight.add(event)
+      }
+      this.markedAggregates.delete(aggregate)
+      batches.push({ aggregate, events })
+    }
+    return batches
+  }
+
+  private release(batches: readonly DispatchBatch[]): void {
+    for (const batch of batches) {
+      for (const event of batch.events) {
+        this.inFlight.delete(event)
+      }
+      this.markedAggregates.add(batch.aggregate)
+    }
+  }
+
+  private finish(batches: readonly DispatchBatch[]): void {
+    for (const batch of batches) {
+      for (const event of batch.events) {
+        this.inFlight.delete(event)
+      }
+      batch.aggregate.acknowledge(batch.events)
+    }
+  }
+
+  private async dispatchEvents(events: readonly DomainEvent[]): Promise<void> {
+    await Promise.all(events.map((event) => this.dispatch(event)))
   }
 
   private markedAggregatesFor(id: UniqueEntityId): DispatchableAggregate[] {
@@ -173,7 +219,7 @@ class DomainEventsImplementation {
     }
     const callbacks = handlers.slice()
     const results = await Promise.allSettled(
-      callbacks.map((handler) => handler(event))
+      callbacks.map((handler) => Promise.resolve().then(() => handler(event)))
     )
     const failures = handlerFailures(results)
     if (failures.length === 0) {

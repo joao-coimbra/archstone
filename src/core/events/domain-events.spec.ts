@@ -26,6 +26,10 @@ class CustomAggregate extends AggregateRoot<null> {
     return aggregate
   }
 
+  addAnother(): void {
+    this.addDomainEvent(new CustomAggregateCreated(this))
+  }
+
   static createWith(id: UniqueEntityId) {
     const aggregate = new CustomAggregate(null, id)
 
@@ -75,6 +79,12 @@ describe("Domain Events", () => {
 
     expect(callbackSpy).not.toHaveBeenCalled()
     expect(aggregate.domainEvents).toHaveLength(1)
+
+    DomainEvents.shouldRun = true
+    await DomainEvents.dispatchEventsForAggregate(aggregate.id)
+
+    expect(callbackSpy).toHaveBeenCalledTimes(1)
+    expect(aggregate.domainEvents).toHaveLength(0)
   })
 
   it("keeps the event until every handler has finished", async () => {
@@ -152,5 +162,79 @@ describe("Domain Events", () => {
     await DomainEvents.dispatchEventsForAggregate(aggregate.id)
 
     expect(callback).not.toHaveBeenCalled()
+  })
+
+  it("does not run the same handlers from a second dispatch that is still in flight", async () => {
+    const aggregate = CustomAggregate.create()
+    let release = (): void => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let calls = 0
+
+    DomainEvents.register(async () => {
+      calls += 1
+      await gate
+    }, CustomAggregateCreated.name)
+
+    const first = DomainEvents.dispatchEventsForAggregate(aggregate.id)
+    const second = DomainEvents.dispatchEventsForAggregate(aggregate.id)
+    release()
+    await first
+    await second
+
+    expect(calls).toBe(1)
+    expect(aggregate.domainEvents).toHaveLength(0)
+  })
+
+  it("does not re-enter when a handler dispatches the same aggregate", async () => {
+    const aggregate = CustomAggregate.create()
+    let calls = 0
+
+    DomainEvents.register(async () => {
+      calls += 1
+      await DomainEvents.dispatchEventsForAggregate(aggregate.id)
+    }, CustomAggregateCreated.name)
+
+    await DomainEvents.dispatchEventsForAggregate(aggregate.id)
+
+    expect(calls).toBe(1)
+    expect(aggregate.domainEvents).toHaveLength(0)
+  })
+
+  it("keeps an event raised while handlers run for a later dispatch", async () => {
+    const aggregate = CustomAggregate.create()
+    let calls = 0
+
+    DomainEvents.register(async () => {
+      calls += 1
+      if (calls === 1) {
+        aggregate.addAnother()
+      }
+      await Promise.resolve()
+    }, CustomAggregateCreated.name)
+
+    await DomainEvents.dispatchEventsForAggregate(aggregate.id)
+
+    expect(calls).toBe(1)
+    expect(aggregate.domainEvents).toHaveLength(1)
+
+    await DomainEvents.dispatchEventsForAggregate(aggregate.id)
+
+    expect(calls).toBe(2)
+    expect(aggregate.domainEvents).toHaveLength(0)
+  })
+
+  it("reports a synchronous handler throw as a failed dispatch", async () => {
+    const aggregate = CustomAggregate.create()
+
+    DomainEvents.register(() => {
+      throw new Error("handler failed")
+    }, CustomAggregateCreated.name)
+
+    await expect(
+      DomainEvents.dispatchEventsForAggregate(aggregate.id)
+    ).rejects.toThrow("Domain event handlers failed.")
+    expect(aggregate.domainEvents).toHaveLength(1)
   })
 })

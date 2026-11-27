@@ -21,8 +21,8 @@
 - Never place repository implementations in `domain/`
 - Never import concrete classes into use cases
 - Never dispatch domain events before persistence
-- Never call `clearEvents()` manually — `dispatchEventsForAggregate` handles it
+- Never call `clearEvents()` or `acknowledge()` from a use case — `dispatchEventsForAggregate` removes the events it delivered and leaves any event raised during that dispatch pending
 - Never pass `UniqueEntityId` to `findById()` — it takes `string`; use `.toValue()`
 - Never treat a `Maybe` as `T | null` — `if (!maybe)` is always false
 - Never use `===` to compare value objects — use `.equals()`
-- Never import events/handlers from `archstone/domain/enterprise` — deprecated
+- Never import `EventHandler` from `archstone/domain/enterprise` — it is exported from `archstone/core`. `DomainEvent` and `DomainEvents` on the enterprise path are deprecated re-exports of the same symbols

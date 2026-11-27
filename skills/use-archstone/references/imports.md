@@ -30,6 +30,6 @@ import type { UseCase, Repository } from "archstone/domain/application"
 // ❌ deep path — breaks dts bundling
 import { ValueObject } from "archstone/core/value-object"
 
-// ❌ deprecated — enterprise EventHandler is non-generic and has no handle()
+// ❌ EventHandler is exported from archstone/core, not from enterprise
 import { DomainEvents, EventHandler } from "archstone/domain/enterprise"
 ```

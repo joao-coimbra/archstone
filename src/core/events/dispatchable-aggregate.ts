@@ -5,4 +5,5 @@ export interface DispatchableAggregate {
   readonly id: UniqueEntityId
   readonly domainEvents: readonly DomainEvent[]
   clearEvents(): void
+  acknowledge(events: readonly DomainEvent[]): void
 }

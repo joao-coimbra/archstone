@@ -92,6 +92,10 @@ export class InvalidEmailError implements UseCaseError {
 export class UserAlreadyExistsError implements UseCaseError {
   message = "A user with this email already exists."
 }
+
+export class WelcomeEmailError implements UseCaseError {
+  message = "The user was saved, but the welcome email was not sent."
+}
 ```
 
 > **Why implement `UseCaseError`?**
@@ -323,6 +327,7 @@ import { Email } from "../enterprise/email.ts"
 import {
   InvalidEmailError,
   UserAlreadyExistsError,
+  WelcomeEmailError,
 } from "../enterprise/errors.ts"
 import { User } from "../enterprise/user.ts"
 import type { UserRepository } from "./user-repository.ts"
@@ -333,7 +338,7 @@ type RegisterUserInput = {
 }
 
 type RegisterUserOutput = Either<
-  UserAlreadyExistsError | InvalidEmailError,
+  UserAlreadyExistsError | InvalidEmailError | WelcomeEmailError,
   User
 >
 
@@ -357,7 +362,14 @@ export class RegisterUserUseCase
       }
 
       const user = User.create({ name, email: emailAddress })
-      await this.users.create(user)
+      try {
+        await this.users.create(user)
+      } catch (error) {
+        if (error instanceof AggregateError) {
+          return left(new WelcomeEmailError())
+        }
+        throw error
+      }
       return right(user)
     }
 
@@ -374,7 +386,7 @@ The lookup uses `emailAddress.value`, the normalized text. Searching with the ra
 
 The email is read inside `isRight()`, where `.value` is an `Email`. The validation error is returned inside `isLeft()`, where `.value` is that error. TypeScript does not narrow the lines after either check, and it does not treat the two checks as exhaustive. The method therefore ends by building an `InvalidEmailError`. `Email.create` always returns one side or the other, so that last return does not run.
 
-The class receives `UserRepository`, not a database client. It returns the user or one of the two errors. The welcome email is not here. The aggregate already recorded that a user was created. The next section reacts to that record.
+The class receives `UserRepository`, not a database client. It returns the user, a validation error, or `WelcomeEmailError` when `create()` rejects with the `AggregateError` from a handler. The next section is that handler. The aggregate has already recorded that a user was created.
 
 ---
 
@@ -425,7 +437,7 @@ async create(user: User): Promise<void> {
 }
 ```
 
-`await dispatchEventsForAggregate` waits until the handlers for that save have settled. The insert is already done. The welcome email is not part of the use case result.
+`await dispatchEventsForAggregate` waits until the handlers for that save have settled. The insert is already done. A rejected handler rejects `create()` with an `AggregateError` and leaves the events on the aggregate. The use case catches that error and returns `left(new WelcomeEmailError())`, so the caller still receives an `Either`. Any other rejection is unexpected and is thrown again.
 
 > **Why dispatch comes after the insert**
 > The event means "a user was stored". Dispatching after the insert keeps the email on that side of the write. `clearEvents()` belongs to the dispatcher. Do not call it from the use case.
@@ -458,7 +470,7 @@ RegisterUserUseCase.execute({ name, email })
   ├─ users.create(user)                  writes the row, then dispatches
   │     └─ OnUserCreated.handle(event)
   │           └─ mailer.sendWelcome(user.email.value)
-  └─ right(user)                         Either<..., User>
+  └─ right(user)                         or left(WelcomeEmailError) if a handler rejects
 ```
 
 | Layer                          | Responsibility                                             |

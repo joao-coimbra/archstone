@@ -10,6 +10,8 @@
 - `clearEvents()` runs only after those handlers settle — do not call it manually. A rejected handler rejects the dispatch and leaves the events in place
 - Test isolation: `DomainEvents.clearHandlers()`, `DomainEvents.clearMarkedAggregates()`, and reset `DomainEvents.shouldRun = true`
 - Set `DomainEvents.shouldRun = false` to skip dispatch without clearing handlers. The events stay on the aggregate until a later dispatch or `clearMarkedAggregates()`
+- A dispatch that is still running does not deliver those same events again. An event raised while the handlers run stays pending for a later dispatch
+- A handler that throws, including a synchronous throw, rejects the dispatch with `AggregateError` and the message `Domain event handlers failed.`
 
 ## DomainEvent shape
 

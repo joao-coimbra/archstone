@@ -134,14 +134,16 @@ export abstract class WatchedList<T> {
    */
   update(items: T[]): void {
     const next = items.slice()
-    this.currentItems = next
-    this.new = next.filter(
+    const added = next.filter(
       (item) =>
         !this.initial.some((initial) => this.compareItems(item, initial))
     )
-    this.removed = this.initial.filter(
+    const removed = this.initial.filter(
       (initial) => !next.some((item) => this.compareItems(initial, item))
     )
+    this.currentItems = next
+    this.new = added
+    this.removed = removed
   }
 
   private isCurrentItem(item: T): boolean {

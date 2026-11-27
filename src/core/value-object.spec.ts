@@ -38,6 +38,30 @@ class Bag extends ValueObject<{ value: unknown }> {
   }
 }
 
+class Hidden {
+  readonly #value: string
+
+  constructor(value: string) {
+    this.#value = value
+  }
+
+  toValue(): string {
+    return this.#value
+  }
+}
+
+class OtherHidden {
+  readonly #value: string
+
+  constructor(value: string) {
+    this.#value = value
+  }
+
+  toValue(): string {
+    return this.#value
+  }
+}
+
 describe("ValueObject", () => {
   it("treats the same attributes as equal regardless of key order", () => {
     const left = Box.from({ a: 1, b: 2 })
@@ -76,6 +100,13 @@ describe("ValueObject", () => {
 
     expect(left.equals(right)).toBe(true)
     expect(left.equals(other)).toBe(false)
+  })
+
+  it("does not treat different toValue types as equal when their fields are hidden", () => {
+    const left = Bag.from(new Hidden("a"))
+    const right = Bag.from(new OtherHidden("b"))
+
+    expect(left.equals(right)).toBe(false)
   })
 
   it("does not share the props object passed to the constructor", () => {

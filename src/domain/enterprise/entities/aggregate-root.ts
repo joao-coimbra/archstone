@@ -54,9 +54,22 @@ export abstract class AggregateRoot<Props> extends Entity<Props> {
 
   /**
    * Clears all pending domain events from this aggregate.
-   * Should be called by the infrastructure layer after events are dispatched.
+   * The dispatcher removes only the events it finished delivering.
+   * Use this when the whole pending set should be dropped.
    */
   clearEvents(): void {
     this._domainEvents.clear()
+  }
+
+  /**
+   * Removes the events a dispatch has already delivered.
+   * Events raised while those handlers ran stay pending.
+   *
+   * @param events - The events that finished dispatching
+   */
+  acknowledge(events: readonly DomainEvent[]): void {
+    for (const event of events) {
+      this._domainEvents.delete(event)
+    }
   }
 }
