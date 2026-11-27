@@ -23,8 +23,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
-    // Paths
-    "baseUrl": ".",
+    // Paths — omit baseUrl: Bun's canary/1.5 checker rejects it (TS5102).
     "paths": {
       "@/*": ["./src/*"]
     }

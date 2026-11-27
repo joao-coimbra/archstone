@@ -72,11 +72,13 @@
   ],
   "scripts": {
     "build": "bunup",
+    "build:native": "bun scripts/build-native.ts",
     "check": "ultracite check",
     "dev": "bunup --watch",
     "fix": "ultracite fix",
     "prepare": "lefthook install",
     "prepublishOnly": "bun run build",
+    "probe:native-dts": "bun scripts/probe-native-dts.ts",
     "release": "bun publish --access public",
     "test": "bun test"
   },

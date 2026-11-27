@@ -51,6 +51,22 @@
           }
         }
       }
+    },
+    {
+      "includes": ["scripts/**"],
+      "javascript": {
+        "globals": ["Bun"]
+      },
+      "linter": {
+        "rules": {
+          "performance": {
+            "noAwaitInLoops": "off"
+          },
+          "style": {
+            "useNamedCaptureGroup": "off"
+          }
+        }
+      }
     }
   ]
 }
