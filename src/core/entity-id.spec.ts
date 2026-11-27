@@ -34,7 +34,7 @@ describe("EntityId", () => {
 
   it("uses the generator only when the value is omitted", () => {
     let calls = 0
-    const GeneratedId = EntityId.generator(() => {
+    const GeneratedId = EntityId.withDefault(() => {
       calls += 1
       return `id-${calls}`
     })
@@ -48,7 +48,7 @@ describe("EntityId", () => {
   })
 
   it("rejects a blank id from the generator", () => {
-    const GeneratedId = EntityId.generator(() => "  ")
+    const GeneratedId = EntityId.withDefault(() => "  ")
 
     expect(() => new GeneratedId()).toThrow("EntityId cannot be blank.")
   })

@@ -191,7 +191,7 @@ if (first.isRight() && second.isRight()) {
 
 `new EntityId()` stores no id. `toValue()` is `undefined`, so the insert omits that column and the database assigns the key. `new EntityId(value)` stores that string. Use `undefined` for a missing key. `null` is a value the driver writes, and a NULL column does not take the database default.
 
-When the domain should assign the id, `EntityId.generator(fn)` returns a constructor. Omitting the argument stores `fn()`. Passing a string stores that string.
+When the domain should assign the id, `EntityId.withDefault(fn)` returns a constructor. Omitting the argument stores `fn()`. Passing a string stores that string.
 
 ```ts
 // src/core/unique-entity-id.ts
@@ -205,7 +205,7 @@ const uuidv7 = (): string => {
   return generate()
 }
 
-export const UniqueEntityId = EntityId.generator(uuidv7)
+export const UniqueEntityId = EntityId.withDefault(uuidv7)
 ```
 
 `new EntityId()` has no id. `new UniqueEntityId()` is a UUID v7. `new UniqueEntityId(row.id)` keeps a stored string. Replace `uuidv7` with the generator you want.

@@ -125,7 +125,7 @@ class GetUser implements UseCase<Input, Output> {
 
 **AggregateRoot.** The entity that guards a cluster of domain objects and records events with `addDomainEvent()`.
 
-**EntityId.** Stores the id string. `toValue()` is what you pass to `findById`. `equals()` compares two ids. `new EntityId()` stores no id, so the insert omits the column and the database assigns the key. `new EntityId(value)` stores that string. `generator(fn)` returns a constructor, usually kept as `UniqueEntityId`: `new UniqueEntityId()` stores `fn()`, and `new UniqueEntityId(value)` stores that string. The library still exports `UniqueEntityId` as a deprecated name for `EntityId`. That alias does not generate an id.
+**EntityId.** Stores the id string. `toValue()` is what you pass to `findById`. `equals()` compares two ids. `new EntityId()` stores no id, so the insert omits the column and the database assigns the key. `new EntityId(value)` stores that string. `withDefault(fn)` returns a constructor, usually kept as `UniqueEntityId`: `new UniqueEntityId()` stores `fn()`, and `new UniqueEntityId(value)` stores that string. The library still exports `UniqueEntityId` as a deprecated name for `EntityId`. That alias does not generate an id.
 
 **WatchedList.** Subclass it, implement `compareItems`, then read `getNewItems()` and `getRemovedItems()`. Both are measured against the list the collection was created with. `update()` replaces the items and recomputes that same diff. The getters return copies.
 

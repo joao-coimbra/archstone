@@ -219,20 +219,20 @@ bun x skills add joao-coimbra/archstone
 
 Nothing in this layer may import from `domain/`.
 
-| Export               | Purpose                                                                                         |
-| -------------------- | ----------------------------------------------------------------------------------------------- |
-| `Either<L, R>`       | Discriminated union for type-safe error handling                                                |
-| `ValueObject<Props>` | Immutable objects defined by attributes                                                         |
-| `EntityId`           | Entity identity. `new EntityId()` has no id. `generator(fn)` defaults a missing value to `fn()` |
-| `WatchedList<T>`     | Collection that tracks additions/removals                                                       |
-| `DomainEvent`        | Marker interface for domain events                                                              |
-| `DomainEvents`       | Central registry and dispatcher — singleton                                                     |
-| `EventHandler<T>`    | Generic interface for side-effect handlers                                                      |
-| `Optional<T, K>`     | Utility type to make specific props optional                                                    |
+| Export               | Purpose                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------- |
+| `Either<L, R>`       | Discriminated union for type-safe error handling                                                  |
+| `ValueObject<Props>` | Immutable objects defined by attributes                                                           |
+| `EntityId`           | Entity identity. `new EntityId()` has no id. `withDefault(fn)` defaults a missing value to `fn()` |
+| `WatchedList<T>`     | Collection that tracks additions/removals                                                         |
+| `DomainEvent`        | Marker interface for domain events                                                                |
+| `DomainEvents`       | Central registry and dispatcher — singleton                                                       |
+| `EventHandler<T>`    | Generic interface for side-effect handlers                                                        |
+| `Optional<T, K>`     | Utility type to make specific props optional                                                      |
 
 - Use `right(value)` / `left(error)`; never throw inside a use case
 - `DomainEvents.dispatchEventsForAggregate()` takes an `EntityId` and returns `Promise<void>` — await it, and never pass `.toValue()`
-- `new EntityId()` stores no id, so the insert omits the key and the database assigns it. `new EntityId(value)` stores that string. `null` writes NULL and skips the database default. `EntityId.generator(fn)` returns a constructor: omit the argument and the value is `fn()`; pass a string and the value is that string
+- `new EntityId()` stores no id, so the insert omits the key and the database assigns it. `new EntityId(value)` stores that string. `null` writes NULL and skips the database default. `EntityId.withDefault(fn)` returns a constructor: omit the argument and the value is `fn()`; pass a string and the value is that string
 - `UniqueEntityId` stays exported as a deprecated alias of `EntityId`. It requires a string and does not generate one. New code does not import it from Archstone
 - `Findable.findById()` takes a `string` — pass `id.toValue()`; returns `Promise<Maybe<T>>` — use `.isNothing()` / `.value`
 - Import `DomainEvent` / `DomainEvents` / `EventHandler<T>` from `archstone/core`

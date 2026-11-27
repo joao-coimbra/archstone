@@ -8,7 +8,7 @@
 - Identity is the **second constructor argument** (`id: EntityId`) — do **not** put `id` inside `Props`. `Entity` does not generate one
 - Use `Optional<T, K>` for auto-generated fields in props (e.g. `"createdAt"`)
 - `new EntityId()` stores no id. `new EntityId(value)` stores that string. A blank string throws. Omitting the id on insert lets the database assign the key. Do not use `null`: an explicit NULL skips the database default
-- `EntityId.generator(fn)` returns a constructor. `new UniqueEntityId()` stores `fn()`. `new UniqueEntityId(value)` stores that string. The entity factory uses `id ?? new UniqueEntityId()`
+- `EntityId.withDefault(fn)` returns a constructor. `new UniqueEntityId()` stores `fn()`. `new UniqueEntityId(value)` stores that string. The entity factory uses `id ?? new UniqueEntityId()`
 - `id.toValue()` / `id.toString()` for the raw string; `id.equals(other)` for comparison
 
 ## Project id
@@ -24,7 +24,7 @@ const uuidv7 = (): string => {
   return generate()
 }
 
-export const UniqueEntityId = EntityId.generator(uuidv7)
+export const UniqueEntityId = EntityId.withDefault(uuidv7)
 ```
 
 `new UniqueEntityId()` is a UUID v7. `new UniqueEntityId(row.id)` keeps a stored string. `new EntityId()` has no id. Replace `uuidv7` with the generator the project wants.

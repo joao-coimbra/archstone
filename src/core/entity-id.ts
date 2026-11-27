@@ -1,4 +1,4 @@
-// biome-ignore-all lint/style/noExcessiveClassesPerFile: generator() returns its own constructor
+// biome-ignore-all lint/style/noExcessiveClassesPerFile: withDefault() returns its own constructor
 
 /**
  * Identity of a domain entity, wrapped so equality is by value.
@@ -8,7 +8,7 @@
  * stores that string. `null` is the wrong signal for a missing key: most
  * drivers write NULL and the database default does not run.
  *
- * `generator(fn)` returns a constructor with the same shape. Omitting the
+ * `withDefault(fn)` returns a constructor with the same shape. Omitting the
  * argument stores `fn()`. Passing a string stores that string.
  *
  * @example
@@ -23,7 +23,7 @@
  *   return generate()
  * }
  *
- * export const UniqueEntityId = EntityId.generator(uuidv7)
+ * export const UniqueEntityId = EntityId.withDefault(uuidv7)
  * ```
  */
 export class EntityId {
@@ -32,7 +32,7 @@ export class EntityId {
   /**
    * Returns a constructor that fills a missing id with `generate()`.
    */
-  static generator(generate: () => string): new (value?: string) => EntityId {
+  static withDefault(generate: () => string): new (value?: string) => EntityId {
     return class extends EntityId {
       constructor(value?: string) {
         super(value === undefined ? generate() : value)
@@ -83,15 +83,11 @@ export class EntityId {
 
 /**
  * @deprecated `UniqueEntityId` is the same constructor as {@link EntityId}.
- * It does not generate an id. Call {@link EntityId.generator} in the project.
+ * It does not generate an id. Call {@link EntityId.withDefault} in the project.
  */
 export const UniqueEntityId: typeof EntityId = EntityId
 
 /**
- * @deprecated Use {@link EntityId}. Call {@link EntityId.generator} in the project to generate an id.
+ * @deprecated Use {@link EntityId}. Call {@link EntityId.withDefault} in the project to generate an id.
  */
 export type UniqueEntityId = EntityId
-
-export const AniqueEntityId = EntityId.generator(uuidv7)
-
-AniqueEntityId
