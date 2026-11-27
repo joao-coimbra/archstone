@@ -11,6 +11,7 @@ Thank you for your interest in contributing!
 - [Architecture Rules](#architecture-rules)
 - [Code Style](#code-style)
 - [Commit Conventions](#commit-conventions)
+- [Documentation](#documentation)
 - [Pull Request Process](#pull-request-process)
 
 ## Reporting Bugs
@@ -73,14 +74,21 @@ Follows [Conventional Commits](https://www.conventionalcommits.org/):
 | `refactor` | No behavior change |
 | `test`     | Tests only         |
 
+## Documentation
+
+`README.md` and `docs/tutorial.md` describe the same public API. When a public class, function, method, or signature changes, update both files in the same pull request.
+
+Also update `skills/use-archstone/` when that change would make an agent generate the old pattern. See [AGENTS.md](./AGENTS.md).
+
 ## Pull Request Process
 
 1. Fork the repo and create a branch: `git checkout -b feat/my-feature`
 2. Make your changes following the architecture rules above
-3. Run `bun test` — all tests must pass
-4. Run `bun x ultracite fix` — no lint errors
-5. Open a PR with a clear description of what and why
-6. PRs that add features should include tests
+3. If a public API or recommended pattern changed, update `README.md` and `docs/tutorial.md` so they still match the code and each other
+4. Run `bun test` — all tests must pass
+5. Run `bun x ultracite fix` — no lint errors
+6. Open a PR with a clear description of what and why
+7. PRs that add features should include tests
 
 ## License
 
