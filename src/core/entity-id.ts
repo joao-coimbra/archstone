@@ -11,8 +11,9 @@
  * a missing key: most drivers write NULL and the database default does not
  * run.
  *
- * `withDefault(fn)` returns the {@link EntityId} class. Omitting the
- * argument stores `fn()`. Passing a string stores that string.
+ * `withDefault(fn)` returns an {@link EntityId} class whose `toValue()` is
+ * `string`. Omitting the argument stores `fn()`. Passing a string stores
+ * that string. The value is never `undefined`.
  *
  * @example
  * ```ts
@@ -33,10 +34,11 @@ export class EntityId {
   private readonly value: string | undefined
 
   /**
-   * Returns the {@link EntityId} class, filling a missing id with `generate()`.
+   * Returns an {@link EntityId} class that always has a string id.
+   * A missing argument is filled with `generate()`. `toValue()` is `string`.
    */
-  static withDefault(generate: () => string): typeof EntityId {
-    return class extends EntityId {
+  static withDefault(generate: () => string): typeof DefaultedEntityId {
+    return class extends DefaultedEntityId {
       constructor(value?: string) {
         super(value === undefined ? generate() : value)
       }
@@ -84,6 +86,23 @@ export class EntityId {
   }
 }
 
+/**
+ * An {@link EntityId} produced by {@link EntityId.withDefault}.
+ * `toValue()` is a string because the constructor always stores one.
+ */
+class DefaultedEntityId extends EntityId {
+  /**
+   * Returns the stored identifier.
+   */
+  override toValue(): string {
+    const value = super.toValue()
+    if (value === undefined) {
+      throw new Error("EntityId cannot be blank.")
+    }
+    return value
+  }
+}
+
 const bunUuidV7 = (): string => {
   const generate = globalThis.Bun?.randomUUIDv7
   if (generate === undefined) {
@@ -102,7 +121,8 @@ const bunUuidV7 = (): string => {
  * defines its own constructor with {@link EntityId.withDefault}.
  * {@link EntityId} and {@link EntityId.withDefault} ship in 1.6.0.
  */
-export const UniqueEntityId: typeof EntityId = EntityId.withDefault(bunUuidV7)
+export const UniqueEntityId: typeof DefaultedEntityId =
+  EntityId.withDefault(bunUuidV7)
 
 /** @deprecated Removed in 2.0. Use {@link EntityId}. */
-export type UniqueEntityId = EntityId
+export type UniqueEntityId = DefaultedEntityId

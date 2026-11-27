@@ -42,8 +42,9 @@ describe("EntityId", () => {
       return `id-${calls}`
     })
     const generated = new GeneratedId()
+    const generatedValue: string = generated.toValue()
 
-    expect(generated.toValue()).toBe("id-1")
+    expect(generatedValue).toBe("id-1")
     expect(generated).toBeInstanceOf(EntityId)
     expect(new GeneratedId("stored").toValue()).toBe("stored")
     expect(calls).toBe(1)
@@ -60,8 +61,10 @@ describe("EntityId", () => {
     const generated = new UniqueEntityId()
     const stored = new UniqueEntityId("stored")
 
+    const generatedValue: string = generated.toValue()
+
     expect(generated).toBeInstanceOf(EntityId)
-    expect(generated.toValue()).toMatch(uuidV7)
+    expect(generatedValue).toMatch(uuidV7)
     expect(stored.toValue()).toBe("stored")
     expect(new EntityId("stored").equals(stored)).toBe(true)
   })
