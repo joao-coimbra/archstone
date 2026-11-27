@@ -189,7 +189,7 @@ if (first.isRight() && second.isRight()) {
 
 ## 5. Give the user an id
 
-`UniqueEntityId` wraps a UUID v7. The value is time-sortable, which suits a database index. `Entity` creates one when you omit the id.
+`UniqueEntityId` wraps a UUID v7. The value is time-sortable, which suits a database index. `Entity` creates one when you omit the id. Generation uses `crypto.getRandomValues`, so the same call works on Bun and on Node.
 
 ```ts
 import { UniqueEntityId } from "archstone/core"

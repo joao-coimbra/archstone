@@ -125,7 +125,7 @@ class GetUser implements UseCase<Input, Output> {
 
 **AggregateRoot.** The entity that guards a cluster of domain objects and records events with `addDomainEvent()`.
 
-**UniqueEntityId.** UUID v7. `toValue()` is the string you pass to `findById`. `equals()` compares two ids.
+**UniqueEntityId.** UUID v7, generated with `crypto.getRandomValues` on Bun and on Node. `toValue()` is the string you pass to `findById`. `equals()` compares two ids.
 
 **WatchedList.** Subclass it, implement `compareItems`, then read `getNewItems()` and `getRemovedItems()`. Both are measured against the list the collection was created with. `update()` replaces the items and recomputes that same diff. The getters return copies.
 

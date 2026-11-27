@@ -1,18 +1,11 @@
-const createUuidV7 = (): string => {
-  const generate = globalThis.Bun?.randomUUIDv7
-  if (!generate) {
-    throw new Error(
-      "UniqueEntityId requires Bun.randomUUIDv7 to generate an id."
-    )
-  }
-  return generate()
-}
+import { createUuidV7 } from "./uuid-v7"
 
 /**
  * Represents a unique identifier for a domain entity.
  *
  * Wraps a UUID v7 string, which is time-sortable and ideal for database
  * indexing. A new identifier is generated automatically if no value is provided.
+ * Generation uses `crypto.getRandomValues`, so it works on Bun and on Node.
  *
  * @example
  * ```ts
