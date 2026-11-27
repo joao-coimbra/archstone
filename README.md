@@ -102,16 +102,16 @@ class GetUser implements UseCase<Input, Output> {
   async execute({ userId }: Input): Promise<Output> {
     const user = await this.users.findById(userId)
 
-    if (user.isNothing()) {
-      return left(new UserNotFoundError(userId))
+    if (user.isJust()) {
+      return right(user.value)
     }
 
-    return right(user.value)
+    return left(new UserNotFoundError(userId))
   }
 }
 ```
 
-`user.isNothing()` means there is no user. `user.value` is the user when there is one. The use case returns that result. It leaves the database client and the HTTP response to your infrastructure.
+`isJust()` means the user is present, and `.value` is that user inside that branch. Outside it, `.value` stays `User | undefined`. The missing id is returned as `left`. The use case leaves the database client and the HTTP response to your infrastructure.
 
 ## Building blocks
 
