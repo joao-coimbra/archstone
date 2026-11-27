@@ -23,6 +23,21 @@ describe("EntityId", () => {
     expect(left.equals(other)).toBe(false)
   })
 
+  it("returns undefined so the database can assign the id", () => {
+    expect(EntityId.create()).toBeUndefined()
+    expect(UniqueEntityId.create()).toBeUndefined()
+  })
+
+  it("lets a subclass replace create with a generated id", () => {
+    class GeneratedId extends EntityId {
+      static override create(): GeneratedId {
+        return new GeneratedId("generated-id")
+      }
+    }
+
+    expect(GeneratedId.create().toValue()).toBe("generated-id")
+  })
+
   it("keeps UniqueEntityId as the same constructor", () => {
     const stored = new UniqueEntityId("stored")
 

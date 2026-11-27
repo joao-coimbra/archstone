@@ -125,7 +125,7 @@ class GetUser implements UseCase<Input, Output> {
 
 **AggregateRoot.** The entity that guards a cluster of domain objects and records events with `addDomainEvent()`.
 
-**EntityId.** Stores the id string. `toValue()` is what you pass to `findById`. `equals()` compares two ids. The entity `create()` generates it when the caller omits the id, and passes `new EntityId(row.id)` when the row already exists. The domain creates the id before the insert, including when the database is able to assign a key. The library still exports `UniqueEntityId` as a deprecated name for `EntityId`. That export requires a string and does not generate one.
+**EntityId.** Stores the id string. `toValue()` is what you pass to `findById`. `equals()` compares two ids. `create()` returns `undefined`: omit the column and the database assigns the key. Extend it in the project, override `create()`, and return a generated id such as a UUID v7. A stored row passes `new EntityId(row.id)`. The library still exports `UniqueEntityId` as a deprecated name for `EntityId`. That alias does the same thing, including `create()` returning `undefined`.
 
 **WatchedList.** Subclass it, implement `compareItems`, then read `getNewItems()` and `getRemovedItems()`. Both are measured against the list the collection was created with. `update()` replaces the items and recomputes that same diff. The getters return copies.
 

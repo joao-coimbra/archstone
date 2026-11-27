@@ -189,27 +189,47 @@ if (first.isRight() && second.isRight()) {
 
 ## 5. Give the user an id
 
-`EntityId` stores the string. It does not generate one. `User.create()` does, when you are registering someone new. Rebuilding a user from a saved row passes the stored string. The domain creates the id before the insert. A database that can assign a key stays out of this decision: the aggregate already has an identity when it is saved.
+`EntityId` stores the string. `EntityId.create()` returns `undefined`. On insert, omit that column and the database assigns the key. Use `undefined` for that absence. `null` is a value the driver writes, and a NULL column does not take the database default.
+
+When the domain should assign the id first, extend `EntityId` and override `create()`.
 
 ```ts
-import { randomUUID } from "node:crypto"
+// src/core/unique-entity-id.ts
 import { EntityId } from "archstone/core"
 
-const generated = new EntityId(randomUUID())
+const uuidv7 = (): string => {
+  const generate = globalThis.Bun?.randomUUIDv7
+  if (generate === undefined) {
+    throw new Error("UniqueEntityId requires a UUID v7 generator.")
+  }
+  return generate()
+}
+
+export class UniqueEntityId extends EntityId {
+  static override create(): UniqueEntityId {
+    return new UniqueEntityId(uuidv7())
+  }
+}
+```
+
+`EntityId.create()` is `undefined`. `UniqueEntityId.create()` is a UUID v7. Replace `uuidv7()` with the generator you want. `new EntityId(row.id)` and `new UniqueEntityId(row.id)` keep a string that is already stored.
+
+```ts
+const generated = UniqueEntityId.create()
 generated.toValue() // the string you store and pass to findById
 
 const stored = new EntityId("0195d810-5b3e-7000-8e3e-1a2b3c4d5e6f")
 generated.equals(stored) // false
 ```
 
-`randomUUID()` is a UUID v4 from Node. Replace it with the format you want. `toValue()` is the plain string. `findById` takes that string. `equals()` compares two ids. `===` compares the objects.
+`toValue()` is the plain string. `findById` takes that string. `equals()` compares two ids. `===` compares the objects.
 
 > **What the wrapper gives you**
 > A repository method can ask for `EntityId` instead of any `string`, and comparison goes through `equals()`. It is still one id type for every entity. A user id and an order id are both `EntityId`, so the type does not distinguish them. Put that distinction in the repository method, or in the aggregate that owns the reference.
 
-`Entity` requires the id. It does not create one. The next section puts `id ?? new EntityId(randomUUID())` inside `User.create()`.
+`Entity` requires the id. It does not create one. The next section puts `id ?? UniqueEntityId.create()` inside `User.create()`.
 
-Archstone still exports `UniqueEntityId`, marked deprecated, as another name for `EntityId`. Do not import that one. It requires a string and does not generate an id.
+Archstone still exports `UniqueEntityId`, marked deprecated, as another name for `EntityId`. Do not import that one. Its `create()` returns `undefined`. The class above is yours.
 
 ---
 
@@ -237,9 +257,9 @@ export class UserCreatedEvent implements DomainEvent {
 
 ```ts
 // src/domain/enterprise/user.ts
-import { randomUUID } from "node:crypto"
 import { type EntityId, type Optional } from "archstone/core"
 import { AggregateRoot } from "archstone/domain/enterprise"
+import { UniqueEntityId } from "../../core/unique-entity-id.ts"
 import type { Email } from "./email.ts"
 import { UserCreatedEvent } from "./user-created-event.ts"
 
@@ -265,7 +285,7 @@ export class User extends AggregateRoot<UserProps> {
   static create(props: Optional<UserProps, "createdAt">, id?: EntityId): User {
     const user = new User(
       { ...props, createdAt: props.createdAt ?? new Date() },
-      id ?? new EntityId(randomUUID())
+      id ?? UniqueEntityId.create()
     )
 
     if (!id) {
@@ -279,7 +299,7 @@ export class User extends AggregateRoot<UserProps> {
 
 `Optional<UserProps, "createdAt">` lets the caller skip `createdAt`. The stored props still include it, because `create()` fills the default.
 
-Pass `id` only when the row already exists. A missing id means this call is a registration, so `create()` builds `new EntityId(randomUUID())` and records `UserCreatedEvent`. Rebuilding a user from the database passes the stored id and does not record that event again. `addDomainEvent()` is protected. It keeps the event on the aggregate until something dispatches it.
+Pass `id` only when the row already exists. A missing id means this call is a registration, so `create()` uses `UniqueEntityId.create()` and records `UserCreatedEvent`. `EntityId.create()` stays `undefined` for the case where the insert lets the database assign the key. Rebuilding a user from the database passes the stored id and does not record that event again. `addDomainEvent()` is protected. It keeps the event on the aggregate until something dispatches it.
 
 `user-created-event.ts` imports `User` as a type only, and `user.ts` imports the event class. Loading the user does not load itself again.
 

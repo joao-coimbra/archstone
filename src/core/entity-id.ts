@@ -1,28 +1,42 @@
 /**
  * Identity of a domain entity, wrapped so equality is by value.
  *
- * The library does not generate the value. The entity `create()` method does,
- * when the caller omits the id. A stored id is passed in as the string already
- * saved. Generation stays in the domain, including when the database is able
- * to assign a key.
+ * `create()` returns `undefined`. That means the id is absent, so the insert
+ * omits the column and the database assigns the key. `null` is the wrong
+ * signal: most drivers write NULL and the database default does not run.
+ *
+ * A project subclass overrides `create()` and returns a generated id, such as
+ * a UUID v7. A stored id is still `new EntityId(row.id)`.
  *
  * @example
  * ```ts
- * import { randomUUID } from "node:crypto"
- * import { EntityId, type Optional } from "archstone/core"
+ * import { EntityId } from "archstone/core"
  *
- * class User extends Entity<UserProps> {
- *   static create(props: Optional<UserProps, "createdAt">, id?: EntityId): User {
- *     return new User(
- *       { ...props, createdAt: props.createdAt ?? new Date() },
- *       id ?? new EntityId(randomUUID()),
- *     )
+ * const uuidv7 = (): string => {
+ *   const generate = globalThis.Bun?.randomUUIDv7
+ *   if (generate === undefined) {
+ *     throw new Error("UniqueEntityId requires a UUID v7 generator.")
+ *   }
+ *   return generate()
+ * }
+ *
+ * export class UniqueEntityId extends EntityId {
+ *   static override create(): UniqueEntityId {
+ *     return new UniqueEntityId(uuidv7())
  *   }
  * }
  * ```
  */
 export class EntityId {
   private readonly value: string
+
+  /**
+   * Returns `undefined` so persistence can leave the key to the database.
+   * Override this in a subclass to generate an id instead.
+   */
+  static create(): EntityId | undefined {
+    return undefined
+  }
 
   constructor(value: string) {
     if (value.trim() === "") {
@@ -58,13 +72,13 @@ export class EntityId {
 }
 
 /**
- * @deprecated `UniqueEntityId` no longer generates an id. It is the same
- * constructor as {@link EntityId} and requires the string. Generate the id
- * in the entity `create()` method: `id ?? new EntityId(randomUUID())`.
+ * @deprecated `UniqueEntityId` is the same constructor as {@link EntityId}.
+ * `create()` returns `undefined`. Extend `EntityId` in the project and
+ * override `create()` to generate an id.
  */
 export const UniqueEntityId: typeof EntityId = EntityId
 
 /**
- * @deprecated Use {@link EntityId}. Generation belongs in the entity `create()` method.
+ * @deprecated Use {@link EntityId}. Override `create()` in a project subclass to generate an id.
  */
 export type UniqueEntityId = EntityId

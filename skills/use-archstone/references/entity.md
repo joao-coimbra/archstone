@@ -7,15 +7,38 @@
 - Always use a static `create()` factory — constructor stays `protected`
 - Identity is the **second constructor argument** (`id: EntityId`) — do **not** put `id` inside `Props`. `Entity` does not generate one
 - Use `Optional<T, K>` for auto-generated fields in props (e.g. `"createdAt"`)
-- `EntityId` from `archstone/core` only stores a string. A blank string throws. `create()` generates a new one when the caller omits the id: `id ?? new EntityId(randomUUID())`. A stored row passes `new EntityId(row.id)`. The domain owns the id even when the database can assign one
+- `EntityId.create()` returns `undefined`. Omit the key on insert and the database assigns it. Do not use `null`: an explicit NULL skips the database default. A blank string throws. A stored row passes `new EntityId(row.id)`
+- Extend `EntityId` in the project as `UniqueEntityId` and override `create()` to return a generated id. The entity factory uses `id ?? UniqueEntityId.create()`
 - `id.toValue()` / `id.toString()` for the raw string; `id.equals(other)` for comparison
+
+## Project id
+
+```ts
+import { EntityId } from "archstone/core"
+
+const uuidv7 = (): string => {
+  const generate = globalThis.Bun?.randomUUIDv7
+  if (generate === undefined) {
+    throw new Error("UniqueEntityId requires a UUID v7 generator.")
+  }
+  return generate()
+}
+
+export class UniqueEntityId extends EntityId {
+  static override create(): UniqueEntityId {
+    return new UniqueEntityId(uuidv7())
+  }
+}
+```
+
+`EntityId.create()` stays `undefined`. `UniqueEntityId.create()` replaces that result with a UUID v7. Replace `uuidv7()` with the generator the project wants.
 
 ## Entity Example
 
 ```ts
-import { randomUUID } from "node:crypto"
 import { Entity } from "archstone/domain/enterprise"
-import { EntityId, type Optional } from "archstone/core"
+import { type EntityId, type Optional } from "archstone/core"
+import { UniqueEntityId } from "@/core/unique-entity-id"
 
 interface ProductProps {
   name: string
@@ -37,7 +60,7 @@ class Product extends Entity<ProductProps> {
   ): Product {
     return new Product(
       { ...props, createdAt: props.createdAt ?? new Date() },
-      id ?? new EntityId(randomUUID())
+      id ?? UniqueEntityId.create()
     )
   }
 }
@@ -46,9 +69,9 @@ class Product extends Entity<ProductProps> {
 ## AggregateRoot Example
 
 ```ts
-import { randomUUID } from "node:crypto"
 import { AggregateRoot } from "archstone/domain/enterprise"
-import { EntityId, type DomainEvent, type Optional } from "archstone/core"
+import type { DomainEvent, EntityId, Optional } from "archstone/core"
+import { UniqueEntityId } from "@/core/unique-entity-id"
 
 interface OrderProps {
   customerId: EntityId
@@ -78,7 +101,7 @@ class Order extends AggregateRoot<OrderProps> {
   ): Order {
     const order = new Order(
       { ...props, createdAt: props.createdAt ?? new Date() },
-      id ?? new EntityId(randomUUID())
+      id ?? UniqueEntityId.create()
     )
     order.addDomainEvent(new OrderCreatedEvent(order))
     return order

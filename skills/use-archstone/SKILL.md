@@ -18,7 +18,7 @@ When working with Archstone:
 7. Repository contracts are interfaces only — implementations belong in infrastructure
 8. Domain events are raised inside aggregates and dispatched after persistence — never before
 9. Import `DomainEvent`, `DomainEvents`, and `EventHandler<T>` from `archstone/core` (enterprise re-exports are deprecated)
-10. Identity is `EntityId` from `archstone/core`. Generate it inside the entity `create()`: `id ?? new EntityId(randomUUID())`. A stored row passes `new EntityId(row.id)`. Never a plain `string`, and never let the database own generation. `UniqueEntityId` exported by Archstone is a deprecated alias of `EntityId`: it requires a string and does not generate one. Do not import it in new code
+10. Identity is `EntityId` from `archstone/core`. `EntityId.create()` returns `undefined`, which means the insert omits the key and the database assigns it. Extend `EntityId` in the project as `UniqueEntityId` and override `create()` to return a generated id, such as a UUID v7. A stored row passes `new EntityId(row.id)`. Never a plain `string`. The `UniqueEntityId` exported by Archstone is a deprecated alias of `EntityId` and its `create()` also returns `undefined`. Do not import it in new code
 11. Use case errors must `implement UseCaseError` — not `extend Error`
 
 If you are unsure about a pattern, check [Conventions Reference](references/conventions.md) before writing code.
