@@ -1,10 +1,10 @@
 import { describe, expect, it } from "bun:test"
-import type { DomainEvent, EventHandler, UniqueEntityId } from "@/index"
+import type { DomainEvent, EntityId, EventHandler } from "@/index"
 
 class Ping implements DomainEvent {
   occurredAt = new Date()
 
-  getAggregateId(): UniqueEntityId {
+  getAggregateId(): EntityId {
     throw new Error("not called")
   }
 }

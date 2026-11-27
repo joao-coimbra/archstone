@@ -27,12 +27,12 @@ core                    results, identity, equality, and domain events
 
 Each layer depends only on the layers below it. Archstone ships `core`, `enterprise`, and `application`. You write the infrastructure.
 
-| Layer                          | What you get                                                                     |
-| ------------------------------ | -------------------------------------------------------------------------------- |
-| `archstone/core`               | `Either`, `Maybe`, `ValueObject`, `UniqueEntityId`, `WatchedList`, domain events |
-| `archstone/domain/enterprise`  | `Entity`, `AggregateRoot`                                                        |
-| `archstone/domain/application` | `UseCase`, `UseCaseError`, repository interfaces                                 |
-| `archstone`                    | Every public export                                                              |
+| Layer                          | What you get                                                               |
+| ------------------------------ | -------------------------------------------------------------------------- |
+| `archstone/core`               | `Either`, `Maybe`, `ValueObject`, `EntityId`, `WatchedList`, domain events |
+| `archstone/domain/enterprise`  | `Entity`, `AggregateRoot`                                                  |
+| `archstone/domain/application` | `UseCase`, `UseCaseError`, repository interfaces                           |
+| `archstone`                    | Every public export                                                        |
 
 Import from these entry points. They are the supported public API.
 
@@ -57,7 +57,7 @@ A step-by-step build of a registration feature is in the [tutorial](./docs/tutor
 - **Success and failure are both visible.** A use case returns `right(value)` or `left(error)`. A missing record is `nothing()`. The caller handles both outcomes in the type.
 - **The domain stays testable.** Use cases receive repository interfaces. Tests pass an in-memory implementation and leave the database out.
 - **Side effects follow a successful save.** The aggregate records what happened. You dispatch those events after persistence, which keeps the welcome email tied to a write that succeeded.
-- **Identity and equality mean something.** `UniqueEntityId` is a UUID v7. Two value objects with the same attributes are equal. Two entities are the same when their ids match.
+- **Identity and equality mean something.** `EntityId` stores the id string. The project extends it and chooses how a new id is generated. Two value objects with the same attributes are equal. Two entities are the same when their ids match.
 - **A collection can report what changed.** `WatchedList` keeps the items added and the items removed, so the repository persists the difference.
 - **Agents follow the same rules.** The project ships a skill that teaches these conventions to a coding agent.
 
@@ -121,11 +121,11 @@ class GetUser implements UseCase<Input, Output> {
 
 **ValueObject.** An object defined by its attributes, created through a static `create()` factory. Equality compares those attributes.
 
-**Entity.** An object defined by a `UniqueEntityId`, also created through `create()`. Equality compares ids.
+**Entity.** An object defined by an `EntityId`, also created through `create()`. Equality compares ids. The constructor requires the id.
 
 **AggregateRoot.** The entity that guards a cluster of domain objects and records events with `addDomainEvent()`.
 
-**UniqueEntityId.** UUID v7. `toValue()` is the string you pass to `findById`. `equals()` compares two ids.
+**EntityId.** Stores the id string. `toValue()` is what you pass to `findById`. `equals()` compares two ids. Extend it in the project, usually as `UniqueEntityId`, and generate the value there. The domain creates the id before the insert, including when the database is able to assign a key.
 
 **WatchedList.** Subclass it, implement `compareItems`, then read `getNewItems()` and `getRemovedItems()`. Both are measured against the list the collection was created with. `update()` replaces the items and recomputes that same diff. The getters return copies.
 

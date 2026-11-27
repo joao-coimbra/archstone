@@ -1,0 +1,25 @@
+import { describe, expect, it } from "bun:test"
+import { EntityId } from "./entity-id"
+
+describe("EntityId", () => {
+  it("keeps a provided identifier", () => {
+    const id = new EntityId("0195d810-5b3e-7000-8e3e-1a2b3c4d5e6f")
+
+    expect(id.toValue()).toBe("0195d810-5b3e-7000-8e3e-1a2b3c4d5e6f")
+    expect(id.toString()).toBe(id.toValue())
+  })
+
+  it("rejects a blank identifier", () => {
+    expect(() => new EntityId("")).toThrow("EntityId cannot be blank.")
+    expect(() => new EntityId("   ")).toThrow("EntityId cannot be blank.")
+  })
+
+  it("compares identifiers by their string value", () => {
+    const left = new EntityId("same")
+    const right = new EntityId("same")
+    const other = new EntityId("other")
+
+    expect(left.equals(right)).toBe(true)
+    expect(left.equals(other)).toBe(false)
+  })
+})

@@ -1,4 +1,4 @@
-import type { UniqueEntityId } from "@/core/index"
+import type { EntityId } from "@/core/index"
 
 /**
  * Base contract for all domain events.
@@ -14,7 +14,7 @@ import type { UniqueEntityId } from "@/core/index"
  *
  *   constructor(private readonly user: User) {}
  *
- *   getAggregateId(): UniqueEntityId {
+ *   getAggregateId(): EntityId {
  *     return this.user.id
  *   }
  * }
@@ -24,7 +24,7 @@ export interface DomainEvent {
   /**
    * Returns the identifier of the aggregate root that raised this event.
    */
-  getAggregateId(): UniqueEntityId
+  getAggregateId(): EntityId
 
   /**
    * The date and time when the event occurred.

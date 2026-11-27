@@ -1,6 +1,6 @@
 ---
 name: archstone
-description: 'Apply Archstone DDD and Clean Architecture conventions. Use when developers: (1) Create domain entities, aggregates, or value objects, (2) Write application use cases, (3) Define repository contracts, (4) Work with domain events or event handlers, (5) Ask about Either, Maybe, UniqueEntityId, WatchedList, DomainEvents, shouldRun, or UseCaseError. Triggers on: "entity", "aggregate", "value object", "use case", "repository", "domain event", "Either", "Maybe", "UniqueEntityId", "WatchedList", "DomainEvents", "archstone".'
+description: 'Apply Archstone DDD and Clean Architecture conventions. Use when developers: (1) Create domain entities, aggregates, or value objects, (2) Write application use cases, (3) Define repository contracts, (4) Work with domain events or event handlers, (5) Ask about Either, Maybe, EntityId, UniqueEntityId, WatchedList, DomainEvents, shouldRun, or UseCaseError. Triggers on: "entity", "aggregate", "value object", "use case", "repository", "domain event", "Either", "Maybe", "EntityId", "UniqueEntityId", "WatchedList", "DomainEvents", "archstone".'
 ---
 
 ## Critical: Follow Archstone Conventions
@@ -18,7 +18,7 @@ When working with Archstone:
 7. Repository contracts are interfaces only — implementations belong in infrastructure
 8. Domain events are raised inside aggregates and dispatched after persistence — never before
 9. Import `DomainEvent`, `DomainEvents`, and `EventHandler<T>` from `archstone/core` (enterprise re-exports are deprecated)
-10. Use `UniqueEntityId` (UUID v7) for all entity identifiers — never a plain `string` as identity
+10. Identity is `EntityId` from `archstone/core`. Extend it in the project as `UniqueEntityId` and generate the value there — never a plain `string`, and never let the database own generation
 11. Use case errors must `implement UseCaseError` — not `extend Error`
 
 If you are unsure about a pattern, check [Conventions Reference](references/conventions.md) before writing code.

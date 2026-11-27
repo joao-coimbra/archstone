@@ -66,7 +66,7 @@ export class InMemoryUserRepository implements UserRepository {
 // ❌ concrete class in use case
 constructor(private repo: PrismaUserRepository) {}
 
-// ❌ UniqueEntityId to findById
+// ❌ EntityId to findById
 await repo.findById(user.id) // wrong
 await repo.findById(user.id.toValue()) // correct
 

@@ -8,7 +8,7 @@ Always import from the **layer entry point**. Deep imports (e.g. `archstone/core
 | `Maybe`, `Just`, `Nothing`, `just`, `nothing`, `maybe`         | `archstone/core`               |
 | `attempt`, `from`                                              | `archstone/core`               |
 | `ValueObject`                                                  | `archstone/core`               |
-| `UniqueEntityId`                                               | `archstone/core`               |
+| `EntityId`                                                     | `archstone/core`               |
 | `WatchedList`                                                  | `archstone/core`               |
 | `Optional`                                                     | `archstone/core`               |
 | `DomainEvent`, `DomainEvents`, `EventHandler`                  | `archstone/core`               |

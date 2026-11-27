@@ -1,4 +1,4 @@
-import type { UniqueEntityId } from "../unique-entity-id"
+import type { EntityId } from "../entity-id"
 import type { DispatchableAggregate } from "./dispatchable-aggregate"
 import type { DomainEvent } from "./domain-event"
 
@@ -91,7 +91,7 @@ class DomainEventsImplementation {
    *
    * @param id - The identifier of the aggregate to dispatch events for
    */
-  async dispatchEventsForAggregate(id: UniqueEntityId): Promise<void> {
+  async dispatchEventsForAggregate(id: EntityId): Promise<void> {
     if (!this.shouldRun) {
       return
     }
@@ -158,7 +158,7 @@ class DomainEventsImplementation {
     this.markedAggregates.clear()
   }
 
-  private claim(id: UniqueEntityId): DispatchBatch[] {
+  private claim(id: EntityId): DispatchBatch[] {
     const batches: DispatchBatch[] = []
     for (const aggregate of this.markedAggregatesFor(id)) {
       if (aggregate.domainEvents.length === 0) {
@@ -202,7 +202,7 @@ class DomainEventsImplementation {
     await Promise.all(events.map((event) => this.dispatch(event)))
   }
 
-  private markedAggregatesFor(id: UniqueEntityId): DispatchableAggregate[] {
+  private markedAggregatesFor(id: EntityId): DispatchableAggregate[] {
     const matches: DispatchableAggregate[] = []
     for (const aggregate of this.markedAggregates) {
       if (aggregate.id.equals(id)) {

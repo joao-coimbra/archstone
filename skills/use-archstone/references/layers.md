@@ -4,7 +4,7 @@
 
 Zero domain knowledge. Contains only pure language utilities and the domain-events bus.
 
-Exports: `Either`, `left`, `right`, `Maybe`, `just`, `nothing`, `maybe`, `attempt`, `from`, `ValueObject`, `UniqueEntityId`, `WatchedList`, `Optional`, `DomainEvent`, `DomainEvents`, `EventHandler`
+Exports: `Either`, `left`, `right`, `Maybe`, `just`, `nothing`, `maybe`, `attempt`, `from`, `ValueObject`, `EntityId`, `WatchedList`, `Optional`, `DomainEvent`, `DomainEvents`, `EventHandler`
 
 ## domain/enterprise/
 

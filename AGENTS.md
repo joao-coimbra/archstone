@@ -76,7 +76,7 @@ Three layers, each with a strict dependency rule — inner layers never import o
 ├─────────────────────────────────────────┤
 │  domain / enterprise                    │ ← entities, aggregates, value objects
 ├─────────────────────────────────────────┤
-│  core                                   │ ← Either, Maybe, ValueObject, UniqueEntityId…
+│  core                                   │ ← Either, Maybe, ValueObject, EntityId…
 └─────────────────────────────────────────┘
 ```
 
@@ -219,19 +219,20 @@ bun x skills add joao-coimbra/archstone
 
 Nothing in this layer may import from `domain/`.
 
-| Export               | Purpose                                          |
-| -------------------- | ------------------------------------------------ |
-| `Either<L, R>`       | Discriminated union for type-safe error handling |
-| `ValueObject<Props>` | Immutable objects defined by attributes          |
-| `UniqueEntityId`     | UUID v7 wrapper for entity identity              |
-| `WatchedList<T>`     | Collection that tracks additions/removals        |
-| `DomainEvent`        | Marker interface for domain events               |
-| `DomainEvents`       | Central registry and dispatcher — singleton      |
-| `EventHandler<T>`    | Generic interface for side-effect handlers       |
-| `Optional<T, K>`     | Utility type to make specific props optional     |
+| Export               | Purpose                                                         |
+| -------------------- | --------------------------------------------------------------- |
+| `Either<L, R>`       | Discriminated union for type-safe error handling                |
+| `ValueObject<Props>` | Immutable objects defined by attributes                         |
+| `EntityId`           | Entity identity. The project extends it and generates the value |
+| `WatchedList<T>`     | Collection that tracks additions/removals                       |
+| `DomainEvent`        | Marker interface for domain events                              |
+| `DomainEvents`       | Central registry and dispatcher — singleton                     |
+| `EventHandler<T>`    | Generic interface for side-effect handlers                      |
+| `Optional<T, K>`     | Utility type to make specific props optional                    |
 
 - Use `right(value)` / `left(error)`; never throw inside a use case
-- `DomainEvents.dispatchEventsForAggregate()` takes a `UniqueEntityId` and returns `Promise<void>` — await it, and never pass `.toValue()`
+- `DomainEvents.dispatchEventsForAggregate()` takes an `EntityId` and returns `Promise<void>` — await it, and never pass `.toValue()`
+- `EntityId` stores a string and does not generate one. Extend it in the consumer project as `UniqueEntityId` and put generation in that constructor. The domain owns the id even when the database can assign a key
 - `Findable.findById()` takes a `string` — pass `id.toValue()`; returns `Promise<Maybe<T>>` — use `.isNothing()` / `.value`
 - Import `DomainEvent` / `DomainEvents` / `EventHandler<T>` from `archstone/core`
 - In tests: `DomainEvents.clearHandlers()`, `clearMarkedAggregates()`, reset `shouldRun = true`

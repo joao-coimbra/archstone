@@ -5,7 +5,7 @@
 - Import from `archstone/core`, `archstone/domain/enterprise`, or `archstone/domain/application` — never deep paths
 - Extend `Entity<Props>` or `AggregateRoot<Props>` for domain entities
 - Extend `ValueObject<Props>` for value objects
-- Use `UniqueEntityId` (UUID v7) for all entity identities — never `string`
+- Use `EntityId` for entity identity — never `string`. Extend it in the project as `UniqueEntityId` and generate the value there
 - Use static `create()` factory — never instantiate directly
 - Return `Either<UseCaseError, Value>` or `Maybe<Value>` from use cases — never throw
 - Treat `Findable.findById` as `Promise<Maybe<T>>` — use `.isNothing()` / `.value`
@@ -22,7 +22,7 @@
 - Never import concrete classes into use cases
 - Never dispatch domain events before persistence
 - Never call `clearEvents()` or `acknowledge()` from a use case — `dispatchEventsForAggregate` removes the events it delivered and leaves any event raised during that dispatch pending
-- Never pass `UniqueEntityId` to `findById()` — it takes `string`; use `.toValue()`
+- Never pass `EntityId` to `findById()` — it takes `string`; use `.toValue()`
 - Never treat a `Maybe` as `T | null` — `if (!maybe)` is always false
 - Never use `===` to compare value objects — use `.equals()`
 - Never import `EventHandler` from `archstone/domain/enterprise` — it is exported from `archstone/core`. `DomainEvent` and `DomainEvents` on the enterprise path are deprecated re-exports of the same symbols

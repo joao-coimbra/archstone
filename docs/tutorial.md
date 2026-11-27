@@ -33,7 +33,7 @@ src/domain/application/register-user.spec.ts
 
 The enterprise files are the business model. The application files orchestrate one operation. `src/infra` is yours: Archstone does not ship database or email code.
 
-Along the way you will use `UseCaseError`, `Either`, `Maybe`, `ValueObject`, `UniqueEntityId`, `AggregateRoot`, `UseCase`, repository contracts, `DomainEvent`, and `EventHandler`. A final section shows `WatchedList` for a collection that must remember what changed.
+Along the way you will use `UseCaseError`, `Either`, `Maybe`, `ValueObject`, `EntityId`, `AggregateRoot`, `UseCase`, repository contracts, `DomainEvent`, and `EventHandler`. A final section shows `WatchedList` for a collection that must remember what changed.
 
 ---
 
@@ -189,11 +189,23 @@ if (first.isRight() && second.isRight()) {
 
 ## 5. Give the user an id
 
-`UniqueEntityId` wraps a UUID v7. The value is time-sortable, which suits a database index. `Entity` creates one when you omit the id.
+`EntityId` stores the string. It does not generate one. The project extends it and chooses the generator. That class is the usual `UniqueEntityId`. The domain creates the id before the insert. A database that can assign a key stays out of this decision: the aggregate already has an identity when it is saved.
 
 ```ts
-import { UniqueEntityId } from "archstone/core"
+// src/core/unique-entity-id.ts
+import { randomUUID } from "node:crypto"
+import { EntityId } from "archstone/core"
 
+export class UniqueEntityId extends EntityId {
+  constructor(value: string = randomUUID()) {
+    super(value)
+  }
+}
+```
+
+`randomUUID()` is a UUID v4 from Node. Replace the default with the format you want. `new UniqueEntityId()` mints a new id. `new UniqueEntityId(row.id)` keeps the string already stored.
+
+```ts
 const generated = new UniqueEntityId()
 generated.toValue() // the string you store and pass to findById
 
@@ -204,9 +216,9 @@ generated.equals(stored) // false
 `toValue()` is the plain string. `findById` takes that string. `equals()` compares two ids. `===` compares the objects.
 
 > **What the wrapper gives you**
-> A repository method can ask for `UniqueEntityId` instead of any `string`, and comparison goes through `equals()`. It is still one id type for every entity. A user id and an order id are both `UniqueEntityId`, so the type does not distinguish them. Put that distinction in the repository method, or in the aggregate that owns the reference.
+> A repository method can ask for `EntityId` instead of any `string`, and comparison goes through `equals()`. It is still one id type for every entity. A user id and an order id are both `EntityId`, so the type does not distinguish them. Put that distinction in the repository method, or in the aggregate that owns the reference.
 
-You rarely call `new UniqueEntityId()` yourself. `User.create()` does it when you are registering someone new, and you pass an existing id when you rebuild a user from a saved row.
+`User.create()` calls `new UniqueEntityId()` when you are registering someone new, and you pass an existing id when you rebuild a user from a saved row. `Entity` requires that id. It does not create one.
 
 ---
 
@@ -218,7 +230,7 @@ The event carries the user that was created. `getAggregateId()` tells the dispat
 
 ```ts
 // src/domain/enterprise/user-created-event.ts
-import { type DomainEvent, type UniqueEntityId } from "archstone/core"
+import { type DomainEvent, type EntityId } from "archstone/core"
 import type { User } from "./user.ts"
 
 export class UserCreatedEvent implements DomainEvent {
@@ -226,7 +238,7 @@ export class UserCreatedEvent implements DomainEvent {
 
   constructor(public readonly user: User) {}
 
-  getAggregateId(): UniqueEntityId {
+  getAggregateId(): EntityId {
     return this.user.id
   }
 }
@@ -234,8 +246,9 @@ export class UserCreatedEvent implements DomainEvent {
 
 ```ts
 // src/domain/enterprise/user.ts
-import { type Optional, type UniqueEntityId } from "archstone/core"
+import type { Optional } from "archstone/core"
 import { AggregateRoot } from "archstone/domain/enterprise"
+import { UniqueEntityId } from "../../core/unique-entity-id.ts"
 import type { Email } from "./email.ts"
 import { UserCreatedEvent } from "./user-created-event.ts"
 
@@ -264,7 +277,7 @@ export class User extends AggregateRoot<UserProps> {
   ): User {
     const user = new User(
       { ...props, createdAt: props.createdAt ?? new Date() },
-      id
+      id ?? new UniqueEntityId()
     )
 
     if (!id) {
@@ -426,7 +439,7 @@ new OnUserCreated(mailer)
 
 ### Dispatch from the repository
 
-Call `await dispatchEventsForAggregate` after the write succeeds. The argument is `user.id`, the `UniqueEntityId`. The method runs the handlers, and clears the aggregate's events only after they settle. A rejected handler rejects the call and leaves the events in place.
+Call `await dispatchEventsForAggregate` after the write succeeds. The argument is `user.id`, the `EntityId`. The method runs the handlers, and clears the aggregate's events only after they settle. A rejected handler rejects the call and leaves the events in place.
 
 ```ts
 import { DomainEvents } from "archstone/core"
@@ -473,12 +486,12 @@ RegisterUserUseCase.execute({ name, email })
   └─ right(user)                         or left(WelcomeEmailError) if a handler rejects
 ```
 
-| Layer                          | Responsibility                                             |
-| ------------------------------ | ---------------------------------------------------------- |
-| `archstone/core`               | `Either`, `Maybe`, `ValueObject`, `UniqueEntityId`, events |
-| `archstone/domain/enterprise`  | `Entity`, `AggregateRoot`                                  |
-| `archstone/domain/application` | `UseCase` and repository interfaces                        |
-| Your infrastructure            | The database, HTTP, and the mailer                         |
+| Layer                          | Responsibility                                       |
+| ------------------------------ | ---------------------------------------------------- |
+| `archstone/core`               | `Either`, `Maybe`, `ValueObject`, `EntityId`, events |
+| `archstone/domain/enterprise`  | `Entity`, `AggregateRoot`                            |
+| `archstone/domain/application` | `UseCase` and repository interfaces                  |
+| Your infrastructure            | The database, HTTP, and the mailer                   |
 
 ---
 
