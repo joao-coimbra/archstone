@@ -4,7 +4,7 @@
 
 Zero domain knowledge. Contains only pure language utilities and the domain-events bus.
 
-Exports: `Either`, `left`, `right`, `Maybe`, `just`, `nothing`, `maybe`, `attempt`, `from`, `ValueObject`, `EntityId`, `UniqueEntityId` (deprecated alias of `EntityId`), `WatchedList`, `Optional`, `DomainEvent`, `DomainEvents`, `EventHandler`
+Exports: `Either`, `left`, `right`, `Maybe`, `just`, `nothing`, `maybe`, `attempt`, `from`, `ValueObject`, `EntityId`, `UniqueEntityId` (deprecated, still generates a UUID v7 with `Bun.randomUUIDv7`, will be removed soon), `WatchedList`, `Optional`, `DomainEvent`, `DomainEvents`, `EventHandler`
 
 ## domain/enterprise/
 

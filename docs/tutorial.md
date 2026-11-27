@@ -225,7 +225,7 @@ generated.equals(stored) // false
 
 `Entity` requires an `EntityId`. It does not create one. The next section puts `id ?? new UniqueEntityId()` inside `User.create()`.
 
-Archstone still exports `UniqueEntityId`, marked deprecated, as another name for `EntityId`. Do not import that one. It does not generate an id. The constructor above is yours.
+Archstone still exports `UniqueEntityId`, marked deprecated. It will be removed soon. `new UniqueEntityId()` still generates a UUID v7 with `Bun.randomUUIDv7`. Move to `EntityId` or `EntityId.withDefault`. Do not import that one. The constructor above is yours.
 
 ---
 

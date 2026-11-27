@@ -233,7 +233,7 @@ Nothing in this layer may import from `domain/`.
 - Use `right(value)` / `left(error)`; never throw inside a use case
 - `DomainEvents.dispatchEventsForAggregate()` takes an `EntityId` and returns `Promise<void>` — await it, and never pass `.toValue()`
 - `new EntityId()` stores no id, so the insert omits the key and the database assigns it. `new EntityId(value)` stores that string. `null` writes NULL and skips the database default. `EntityId.withDefault(fn)` returns a constructor: omit the argument and the value is `fn()`; pass a string and the value is that string
-- `UniqueEntityId` stays exported as a deprecated alias of `EntityId`. It requires a string and does not generate one. New code does not import it from Archstone
+- `UniqueEntityId` stays exported and deprecated. It will be removed soon. `new UniqueEntityId()` still generates a UUID v7 with `Bun.randomUUIDv7`. `new UniqueEntityId(value)` stores that string. New code uses `EntityId` or `EntityId.withDefault` and does not import `UniqueEntityId` from Archstone
 - `Findable.findById()` takes a `string` — pass `id.toValue()`; returns `Promise<Maybe<T>>` — use `.isNothing()` / `.value`
 - Import `DomainEvent` / `DomainEvents` / `EventHandler<T>` from `archstone/core`
 - In tests: `DomainEvents.clearHandlers()`, `clearMarkedAggregates()`, reset `shouldRun = true`

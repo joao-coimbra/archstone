@@ -8,7 +8,7 @@
  * stores that string. `null` is the wrong signal for a missing key: most
  * drivers write NULL and the database default does not run.
  *
- * `withDefault(fn)` returns a constructor with the same shape. Omitting the
+ * `withDefault(fn)` returns the {@link EntityId} class. Omitting the
  * argument stores `fn()`. Passing a string stores that string.
  *
  * @example
@@ -30,9 +30,9 @@ export class EntityId {
   private readonly value: string | undefined
 
   /**
-   * Returns a constructor that fills a missing id with `generate()`.
+   * Returns the {@link EntityId} class, filling a missing id with `generate()`.
    */
-  static withDefault(generate: () => string): new (value?: string) => EntityId {
+  static withDefault(generate: () => string): typeof EntityId {
     return class extends EntityId {
       constructor(value?: string) {
         super(value === undefined ? generate() : value)
@@ -81,13 +81,28 @@ export class EntityId {
   }
 }
 
-/**
- * @deprecated `UniqueEntityId` is the same constructor as {@link EntityId}.
- * It does not generate an id. Call {@link EntityId.withDefault} in the project.
- */
-export const UniqueEntityId: typeof EntityId = EntityId
+const bunUuidV7 = (): string => {
+  const generate = globalThis.Bun?.randomUUIDv7
+  if (generate === undefined) {
+    throw new Error(
+      "UniqueEntityId requires Bun.randomUUIDv7. This constructor will be removed. Use EntityId.withDefault in the project."
+    )
+  }
+  return generate()
+}
 
 /**
- * @deprecated Use {@link EntityId}. Call {@link EntityId.withDefault} in the project to generate an id.
+ * @deprecated `UniqueEntityId` will be removed soon. `new UniqueEntityId()`
+ * still generates a UUID v7 with `Bun.randomUUIDv7`, and
+ * `new UniqueEntityId(value)` stores that string. Move to {@link EntityId} or
+ * {@link EntityId.withDefault}.
+ */
+export const UniqueEntityId: typeof EntityId = EntityId.withDefault(bunUuidV7)
+
+/**
+ * @deprecated `UniqueEntityId` will be removed soon. `new UniqueEntityId()`
+ * still generates a UUID v7 with `Bun.randomUUIDv7`, and
+ * `new UniqueEntityId(value)` stores that string. Move to {@link EntityId} or
+ * {@link EntityId.withDefault}.
  */
 export type UniqueEntityId = EntityId

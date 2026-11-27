@@ -1,6 +1,9 @@
 import { describe, expect, it } from "bun:test"
 import { EntityId, UniqueEntityId } from "./entity-id"
 
+const uuidV7 =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
+
 describe("EntityId", () => {
   it("stores no id when the value is omitted", () => {
     const id = new EntityId()
@@ -53,11 +56,13 @@ describe("EntityId", () => {
     expect(() => new GeneratedId()).toThrow("EntityId cannot be blank.")
   })
 
-  it("keeps UniqueEntityId as the same constructor", () => {
+  it("keeps the deprecated UniqueEntityId generating a UUID v7", () => {
+    const generated = new UniqueEntityId()
     const stored = new UniqueEntityId("stored")
 
-    expect(UniqueEntityId).toBe(EntityId)
-    expect(stored).toBeInstanceOf(EntityId)
+    expect(generated).toBeInstanceOf(EntityId)
+    expect(generated.toValue()).toMatch(uuidV7)
+    expect(stored.toValue()).toBe("stored")
     expect(new EntityId("stored").equals(stored)).toBe(true)
   })
 })
