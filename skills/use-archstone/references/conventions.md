@@ -5,7 +5,7 @@
 - Import from `archstone/core`, `archstone/domain/enterprise`, or `archstone/domain/application` — never deep paths
 - Extend `Entity<Props>` or `AggregateRoot<Props>` for domain entities
 - Extend `ValueObject<Props>` for value objects
-- Use `EntityId` for entity identity — never `string`. `EntityId.create()` returns `undefined` so the database can assign the key. Override `create()` on a project subclass to generate an id. A stored row passes `new EntityId(row.id)`. The `UniqueEntityId` exported by Archstone is a deprecated alias and its `create()` also returns `undefined`
+- Use `EntityId` for entity identity — never `string`. `new EntityId()` has no id. `new EntityId(value)` stores that string. `EntityId.generator(fn)` returns a constructor that uses `fn()` only when the argument is omitted. The `UniqueEntityId` exported by Archstone is a deprecated alias and does not generate an id
 - Use static `create()` factory — never instantiate directly
 - Return `Either<UseCaseError, Value>` or `Maybe<Value>` from use cases — never throw
 - Treat `Findable.findById` as `Promise<Maybe<T>>` — use `.isNothing()` / `.value`

@@ -189,9 +189,9 @@ if (first.isRight() && second.isRight()) {
 
 ## 5. Give the user an id
 
-`EntityId` stores the string. `EntityId.create()` returns `undefined`. On insert, omit that column and the database assigns the key. Use `undefined` for that absence. `null` is a value the driver writes, and a NULL column does not take the database default.
+`new EntityId()` stores no id. `toValue()` is `undefined`, so the insert omits that column and the database assigns the key. `new EntityId(value)` stores that string. Use `undefined` for a missing key. `null` is a value the driver writes, and a NULL column does not take the database default.
 
-When the domain should assign the id first, extend `EntityId` and override `create()`.
+When the domain should assign the id, `EntityId.generator(fn)` returns a constructor. Omitting the argument stores `fn()`. Passing a string stores that string.
 
 ```ts
 // src/core/unique-entity-id.ts
@@ -205,17 +205,13 @@ const uuidv7 = (): string => {
   return generate()
 }
 
-export class UniqueEntityId extends EntityId {
-  static override create(): UniqueEntityId {
-    return new UniqueEntityId(uuidv7())
-  }
-}
+export const UniqueEntityId = EntityId.generator(uuidv7)
 ```
 
-`EntityId.create()` is `undefined`. `UniqueEntityId.create()` is a UUID v7. Replace `uuidv7()` with the generator you want. `new EntityId(row.id)` and `new UniqueEntityId(row.id)` keep a string that is already stored.
+`new EntityId()` has no id. `new UniqueEntityId()` is a UUID v7. `new UniqueEntityId(row.id)` keeps a stored string. Replace `uuidv7` with the generator you want.
 
 ```ts
-const generated = UniqueEntityId.create()
+const generated = new UniqueEntityId()
 generated.toValue() // the string you store and pass to findById
 
 const stored = new EntityId("0195d810-5b3e-7000-8e3e-1a2b3c4d5e6f")
@@ -227,9 +223,9 @@ generated.equals(stored) // false
 > **What the wrapper gives you**
 > A repository method can ask for `EntityId` instead of any `string`, and comparison goes through `equals()`. It is still one id type for every entity. A user id and an order id are both `EntityId`, so the type does not distinguish them. Put that distinction in the repository method, or in the aggregate that owns the reference.
 
-`Entity` requires the id. It does not create one. The next section puts `id ?? UniqueEntityId.create()` inside `User.create()`.
+`Entity` requires an `EntityId`. It does not create one. The next section puts `id ?? new UniqueEntityId()` inside `User.create()`.
 
-Archstone still exports `UniqueEntityId`, marked deprecated, as another name for `EntityId`. Do not import that one. Its `create()` returns `undefined`. The class above is yours.
+Archstone still exports `UniqueEntityId`, marked deprecated, as another name for `EntityId`. Do not import that one. It does not generate an id. The constructor above is yours.
 
 ---
 
@@ -285,7 +281,7 @@ export class User extends AggregateRoot<UserProps> {
   static create(props: Optional<UserProps, "createdAt">, id?: EntityId): User {
     const user = new User(
       { ...props, createdAt: props.createdAt ?? new Date() },
-      id ?? UniqueEntityId.create()
+      id ?? new UniqueEntityId()
     )
 
     if (!id) {
@@ -299,7 +295,7 @@ export class User extends AggregateRoot<UserProps> {
 
 `Optional<UserProps, "createdAt">` lets the caller skip `createdAt`. The stored props still include it, because `create()` fills the default.
 
-Pass `id` only when the row already exists. A missing id means this call is a registration, so `create()` uses `UniqueEntityId.create()` and records `UserCreatedEvent`. `EntityId.create()` stays `undefined` for the case where the insert lets the database assign the key. Rebuilding a user from the database passes the stored id and does not record that event again. `addDomainEvent()` is protected. It keeps the event on the aggregate until something dispatches it.
+Pass `id` only when the row already exists. A missing id means this call is a registration, so `create()` uses `new UniqueEntityId()` and records `UserCreatedEvent`. `new EntityId()` is the case where the insert lets the database assign the key. Rebuilding a user from the database passes the stored id and does not record that event again. `addDomainEvent()` is protected. It keeps the event on the aggregate until something dispatches it.
 
 `user-created-event.ts` imports `User` as a type only, and `user.ts` imports the event class. Loading the user does not load itself again.
 

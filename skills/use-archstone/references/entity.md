@@ -7,8 +7,8 @@
 - Always use a static `create()` factory — constructor stays `protected`
 - Identity is the **second constructor argument** (`id: EntityId`) — do **not** put `id` inside `Props`. `Entity` does not generate one
 - Use `Optional<T, K>` for auto-generated fields in props (e.g. `"createdAt"`)
-- `EntityId.create()` returns `undefined`. Omit the key on insert and the database assigns it. Do not use `null`: an explicit NULL skips the database default. A blank string throws. A stored row passes `new EntityId(row.id)`
-- Extend `EntityId` in the project as `UniqueEntityId` and override `create()` to return a generated id. The entity factory uses `id ?? UniqueEntityId.create()`
+- `new EntityId()` stores no id. `new EntityId(value)` stores that string. A blank string throws. Omitting the id on insert lets the database assign the key. Do not use `null`: an explicit NULL skips the database default
+- `EntityId.generator(fn)` returns a constructor. `new UniqueEntityId()` stores `fn()`. `new UniqueEntityId(value)` stores that string. The entity factory uses `id ?? new UniqueEntityId()`
 - `id.toValue()` / `id.toString()` for the raw string; `id.equals(other)` for comparison
 
 ## Project id
@@ -24,14 +24,10 @@ const uuidv7 = (): string => {
   return generate()
 }
 
-export class UniqueEntityId extends EntityId {
-  static override create(): UniqueEntityId {
-    return new UniqueEntityId(uuidv7())
-  }
-}
+export const UniqueEntityId = EntityId.generator(uuidv7)
 ```
 
-`EntityId.create()` stays `undefined`. `UniqueEntityId.create()` replaces that result with a UUID v7. Replace `uuidv7()` with the generator the project wants.
+`new UniqueEntityId()` is a UUID v7. `new UniqueEntityId(row.id)` keeps a stored string. `new EntityId()` has no id. Replace `uuidv7` with the generator the project wants.
 
 ## Entity Example
 
@@ -60,7 +56,7 @@ class Product extends Entity<ProductProps> {
   ): Product {
     return new Product(
       { ...props, createdAt: props.createdAt ?? new Date() },
-      id ?? UniqueEntityId.create()
+      id ?? new UniqueEntityId()
     )
   }
 }
@@ -101,7 +97,7 @@ class Order extends AggregateRoot<OrderProps> {
   ): Order {
     const order = new Order(
       { ...props, createdAt: props.createdAt ?? new Date() },
-      id ?? UniqueEntityId.create()
+      id ?? new UniqueEntityId()
     )
     order.addDomainEvent(new OrderCreatedEvent(order))
     return order

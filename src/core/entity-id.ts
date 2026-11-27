@@ -1,12 +1,15 @@
+// biome-ignore-all lint/style/noExcessiveClassesPerFile: generator() returns its own constructor
+
 /**
  * Identity of a domain entity, wrapped so equality is by value.
  *
- * `create()` returns `undefined`. That means the id is absent, so the insert
- * omits the column and the database assigns the key. `null` is the wrong
- * signal: most drivers write NULL and the database default does not run.
+ * `new EntityId()` stores no id: `toValue()` is `undefined`, so the insert
+ * omits the column and the database assigns the key. `new EntityId(value)`
+ * stores that string. `null` is the wrong signal for a missing key: most
+ * drivers write NULL and the database default does not run.
  *
- * A project subclass overrides `create()` and returns a generated id, such as
- * a UUID v7. A stored id is still `new EntityId(row.id)`.
+ * `generator(fn)` returns a constructor with the same shape. Omitting the
+ * argument stores `fn()`. Passing a string stores that string.
  *
  * @example
  * ```ts
@@ -20,26 +23,25 @@
  *   return generate()
  * }
  *
- * export class UniqueEntityId extends EntityId {
- *   static override create(): UniqueEntityId {
- *     return new UniqueEntityId(uuidv7())
- *   }
- * }
+ * export const UniqueEntityId = EntityId.generator(uuidv7)
  * ```
  */
 export class EntityId {
-  private readonly value: string
+  private readonly value: string | undefined
 
   /**
-   * Returns `undefined` so persistence can leave the key to the database.
-   * Override this in a subclass to generate an id instead.
+   * Returns a constructor that fills a missing id with `generate()`.
    */
-  static create(): EntityId | undefined {
-    return undefined
+  static generator(generate: () => string): new (value?: string) => EntityId {
+    return class extends EntityId {
+      constructor(value?: string) {
+        super(value === undefined ? generate() : value)
+      }
+    }
   }
 
-  constructor(value: string) {
-    if (value.trim() === "") {
+  constructor(value?: string) {
+    if (value !== undefined && value.trim() === "") {
       throw new Error("EntityId cannot be blank.")
     }
     this.value = value
@@ -47,38 +49,49 @@ export class EntityId {
 
   /**
    * Returns the identifier as a primitive string.
-   * Useful for serialization and database persistence.
+   * `undefined` means the id was not assigned.
    */
-  toValue(): string {
+  toValue(): string | undefined {
     return this.value
   }
 
   /**
    * Returns the string representation of the identifier.
+   * An unassigned id is an empty string.
    */
   toString(): string {
-    return this.value
+    return this.value ?? ""
   }
 
   /**
    * Compares this identifier with another by value equality.
+   * An unassigned id is not equal to any id, including another unassigned one.
    *
    * @param id - The identifier to compare against
-   * @returns `true` if both identifiers have the same value
+   * @returns `true` if both identifiers have the same string value
    */
   equals(id: EntityId): boolean {
+    if (id === this) {
+      return true
+    }
+    if (this.value === undefined || id.toValue() === undefined) {
+      return false
+    }
     return id.toValue() === this.value
   }
 }
 
 /**
  * @deprecated `UniqueEntityId` is the same constructor as {@link EntityId}.
- * `create()` returns `undefined`. Extend `EntityId` in the project and
- * override `create()` to generate an id.
+ * It does not generate an id. Call {@link EntityId.generator} in the project.
  */
 export const UniqueEntityId: typeof EntityId = EntityId
 
 /**
- * @deprecated Use {@link EntityId}. Override `create()` in a project subclass to generate an id.
+ * @deprecated Use {@link EntityId}. Call {@link EntityId.generator} in the project to generate an id.
  */
 export type UniqueEntityId = EntityId
+
+export const AniqueEntityId = EntityId.generator(uuidv7)
+
+AniqueEntityId

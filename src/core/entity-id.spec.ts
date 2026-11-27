@@ -2,11 +2,20 @@ import { describe, expect, it } from "bun:test"
 import { EntityId, UniqueEntityId } from "./entity-id"
 
 describe("EntityId", () => {
+  it("stores no id when the value is omitted", () => {
+    const id = new EntityId()
+
+    expect(id.toValue()).toBeUndefined()
+    expect(id.toString()).toBe("")
+    expect(id.equals(new EntityId())).toBe(false)
+    expect(id.equals(id)).toBe(true)
+  })
+
   it("keeps a provided identifier", () => {
     const id = new EntityId("0195d810-5b3e-7000-8e3e-1a2b3c4d5e6f")
 
     expect(id.toValue()).toBe("0195d810-5b3e-7000-8e3e-1a2b3c4d5e6f")
-    expect(id.toString()).toBe(id.toValue())
+    expect(id.toString()).toBe("0195d810-5b3e-7000-8e3e-1a2b3c4d5e6f")
   })
 
   it("rejects a blank identifier", () => {
@@ -23,19 +32,25 @@ describe("EntityId", () => {
     expect(left.equals(other)).toBe(false)
   })
 
-  it("returns undefined so the database can assign the id", () => {
-    expect(EntityId.create()).toBeUndefined()
-    expect(UniqueEntityId.create()).toBeUndefined()
+  it("uses the generator only when the value is omitted", () => {
+    let calls = 0
+    const GeneratedId = EntityId.generator(() => {
+      calls += 1
+      return `id-${calls}`
+    })
+    const generated = new GeneratedId()
+
+    expect(generated.toValue()).toBe("id-1")
+    expect(generated).toBeInstanceOf(EntityId)
+    expect(new GeneratedId("stored").toValue()).toBe("stored")
+    expect(calls).toBe(1)
+    expect(new GeneratedId().equals(generated)).toBe(false)
   })
 
-  it("lets a subclass replace create with a generated id", () => {
-    class GeneratedId extends EntityId {
-      static override create(): GeneratedId {
-        return new GeneratedId("generated-id")
-      }
-    }
+  it("rejects a blank id from the generator", () => {
+    const GeneratedId = EntityId.generator(() => "  ")
 
-    expect(GeneratedId.create().toValue()).toBe("generated-id")
+    expect(() => new GeneratedId()).toThrow("EntityId cannot be blank.")
   })
 
   it("keeps UniqueEntityId as the same constructor", () => {
