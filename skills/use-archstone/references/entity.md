@@ -7,8 +7,9 @@
 - Always use a static `create()` factory — constructor stays `protected`
 - Identity is the **second constructor argument** (`id: EntityId`) — do **not** put `id` inside `Props`. `Entity` does not generate one
 - Use `Optional<T, K>` for auto-generated fields in props (e.g. `"createdAt"`)
-- `new EntityId()` stores no id. `new EntityId(value)` stores that string. A blank string throws. Omitting the id on insert lets the database assign the key. Do not use `null`: an explicit NULL skips the database default
-- `EntityId.withDefault(fn)` returns a constructor. `new UniqueEntityId()` stores `fn()`. `new UniqueEntityId(value)` stores that string. The entity factory uses `id ?? new UniqueEntityId()`
+- `EntityId` and `EntityId.withDefault(fn)` ship in 1.6.0. `new EntityId()` stores no id. `new EntityId(value)` stores that string. A blank string throws. Omitting the id on insert lets the database assign the key. Do not use `null`: an explicit NULL skips the database default
+- `EntityId.withDefault(fn)` returns the `EntityId` class. Omitting the argument stores `fn()`. Passing a string stores that string. The project defines its own constructor with that class. The entity factory uses `id ?? new UniqueEntityId()` when `UniqueEntityId` is that constructor
+- The `UniqueEntityId` exported by Archstone is deprecated and will be removed in 2.0. Until then `new UniqueEntityId()` still generates a UUID v7 with `Bun.randomUUIDv7`. New code does not import `UniqueEntityId` from Archstone
 - `id.toValue()` / `id.toString()` for the raw string; `id.equals(other)` for comparison
 
 ## Project id
@@ -27,7 +28,7 @@ const uuidv7 = (): string => {
 export const UniqueEntityId = EntityId.withDefault(uuidv7)
 ```
 
-`new UniqueEntityId()` is a UUID v7. `new UniqueEntityId(row.id)` keeps a stored string. `new EntityId()` has no id. Replace `uuidv7` with the generator the project wants.
+`new UniqueEntityId()` in this file is a UUID v7 from the function passed to `withDefault`. `new UniqueEntityId(row.id)` keeps a stored string. `new EntityId()` has no id. Replace `uuidv7` with that function. The `UniqueEntityId` exported by Archstone is a different constructor: it is deprecated and will be removed in 2.0. Until then that export still generates a UUID v7 with `Bun.randomUUIDv7`. New code does not import it.
 
 ## Entity Example
 

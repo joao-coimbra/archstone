@@ -189,9 +189,11 @@ if (first.isRight() && second.isRight()) {
 
 ## 5. Give the user an id
 
-`new EntityId()` stores no id. `toValue()` is `undefined`, so the insert omits that column and the database assigns the key. `new EntityId(value)` stores that string. Use `undefined` for a missing key. `null` is a value the driver writes, and a NULL column does not take the database default.
+`EntityId` and `EntityId.withDefault(fn)` ship in 1.6.0.
 
-When the domain should assign the id, `EntityId.withDefault(fn)` returns a constructor. Omitting the argument stores `fn()`. Passing a string stores that string.
+`new EntityId()` stores no id. `toValue()` is `undefined`, so the insert omits that column and the database assigns the key. `new EntityId(value)` stores that string. A blank string throws. Use `undefined` for a missing key. `null` is a value the driver writes, and a NULL column does not take the database default.
+
+When the domain should assign the id, `EntityId.withDefault(fn)` returns the `EntityId` class. Omitting the argument stores `fn()`. Passing a string stores that string.
 
 ```ts
 // src/core/unique-entity-id.ts
@@ -208,7 +210,7 @@ const uuidv7 = (): string => {
 export const UniqueEntityId = EntityId.withDefault(uuidv7)
 ```
 
-`new EntityId()` has no id. `new UniqueEntityId()` is a UUID v7. `new UniqueEntityId(row.id)` keeps a stored string. Replace `uuidv7` with the generator you want.
+`new EntityId()` has no id. `new UniqueEntityId()` above is a UUID v7 from the function the project passed to `withDefault`. `new UniqueEntityId(row.id)` keeps a stored string. Replace `uuidv7` with that function.
 
 ```ts
 const generated = new UniqueEntityId()
@@ -225,7 +227,7 @@ generated.equals(stored) // false
 
 `Entity` requires an `EntityId`. It does not create one. The next section puts `id ?? new UniqueEntityId()` inside `User.create()`.
 
-Archstone still exports `UniqueEntityId`, marked deprecated. It will be removed soon. `new UniqueEntityId()` still generates a UUID v7 with `Bun.randomUUIDv7`. Move to `EntityId` or `EntityId.withDefault`. Do not import that one. The constructor above is yours.
+Archstone still exports `UniqueEntityId`. That export is deprecated and will be removed in 2.0. Until then `new UniqueEntityId()` from Archstone still generates a UUID v7 with `Bun.randomUUIDv7`. New code does not import `UniqueEntityId` from Archstone. The constructor above is the project's, from `EntityId.withDefault(fn)`.
 
 ---
 

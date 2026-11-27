@@ -3,10 +3,13 @@
 /**
  * Identity of a domain entity, wrapped so equality is by value.
  *
+ * `EntityId` and `withDefault(fn)` ship in 1.6.0.
+ *
  * `new EntityId()` stores no id: `toValue()` is `undefined`, so the insert
  * omits the column and the database assigns the key. `new EntityId(value)`
- * stores that string. `null` is the wrong signal for a missing key: most
- * drivers write NULL and the database default does not run.
+ * stores that string. A blank string throws. `null` is the wrong signal for
+ * a missing key: most drivers write NULL and the database default does not
+ * run.
  *
  * `withDefault(fn)` returns the {@link EntityId} class. Omitting the
  * argument stores `fn()`. Passing a string stores that string.
@@ -85,24 +88,28 @@ const bunUuidV7 = (): string => {
   const generate = globalThis.Bun?.randomUUIDv7
   if (generate === undefined) {
     throw new Error(
-      "UniqueEntityId requires Bun.randomUUIDv7. This constructor will be removed. Use EntityId.withDefault in the project."
+      "UniqueEntityId requires Bun.randomUUIDv7. This constructor will be removed in 2.0. Use EntityId.withDefault in the project."
     )
   }
   return generate()
 }
 
 /**
- * @deprecated `UniqueEntityId` will be removed soon. `new UniqueEntityId()`
- * still generates a UUID v7 with `Bun.randomUUIDv7`, and
- * `new UniqueEntityId(value)` stores that string. Move to {@link EntityId} or
- * {@link EntityId.withDefault}.
+ * @deprecated `UniqueEntityId` is deprecated and will be removed in 2.0.
+ * Until then `new UniqueEntityId()` still generates a UUID v7 with
+ * `Bun.randomUUIDv7`, and `new UniqueEntityId(value)` stores that string.
+ * New code does not import `UniqueEntityId` from Archstone. The project
+ * defines its own constructor with {@link EntityId.withDefault}.
+ * {@link EntityId} and {@link EntityId.withDefault} ship in 1.6.0.
  */
 export const UniqueEntityId: typeof EntityId = EntityId.withDefault(bunUuidV7)
 
 /**
- * @deprecated `UniqueEntityId` will be removed soon. `new UniqueEntityId()`
- * still generates a UUID v7 with `Bun.randomUUIDv7`, and
- * `new UniqueEntityId(value)` stores that string. Move to {@link EntityId} or
- * {@link EntityId.withDefault}.
+ * @deprecated `UniqueEntityId` is deprecated and will be removed in 2.0.
+ * Until then `new UniqueEntityId()` still generates a UUID v7 with
+ * `Bun.randomUUIDv7`, and `new UniqueEntityId(value)` stores that string.
+ * New code does not import `UniqueEntityId` from Archstone. The project
+ * defines its own constructor with {@link EntityId.withDefault}.
+ * {@link EntityId} and {@link EntityId.withDefault} ship in 1.6.0.
  */
 export type UniqueEntityId = EntityId

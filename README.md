@@ -57,7 +57,7 @@ A step-by-step build of a registration feature is in the [tutorial](./docs/tutor
 - **Success and failure are both visible.** A use case returns `right(value)` or `left(error)`. A missing record is `nothing()`. The caller handles both outcomes in the type.
 - **The domain stays testable.** Use cases receive repository interfaces. Tests pass an in-memory implementation and leave the database out.
 - **Side effects follow a successful save.** The aggregate records what happened. You dispatch those events after persistence, which keeps the welcome email tied to a write that succeeded.
-- **Identity and equality mean something.** `EntityId` stores the id string. The project extends it and chooses how a new id is generated. Two value objects with the same attributes are equal. Two entities are the same when their ids match.
+- **Identity and equality mean something.** `EntityId` stores the id string. The project defines its own constructor with `EntityId.withDefault(fn)` and chooses how a new id is generated. Two value objects with the same attributes are equal. Two entities are the same when their ids match.
 - **A collection can report what changed.** `WatchedList` keeps the items added and the items removed, so the repository persists the difference.
 - **Agents follow the same rules.** The project ships a skill that teaches these conventions to a coding agent.
 
@@ -125,7 +125,7 @@ class GetUser implements UseCase<Input, Output> {
 
 **AggregateRoot.** The entity that guards a cluster of domain objects and records events with `addDomainEvent()`.
 
-**EntityId.** Stores the id string. `toValue()` is what you pass to `findById`. `equals()` compares two ids. `new EntityId()` stores no id, so the insert omits the column and the database assigns the key. `new EntityId(value)` stores that string. `withDefault(fn)` returns a constructor, usually kept as `UniqueEntityId`: `new UniqueEntityId()` stores `fn()`, and `new UniqueEntityId(value)` stores that string. The library still exports `UniqueEntityId`, deprecated, and it will be removed soon. `new UniqueEntityId()` still generates a UUID v7 with `Bun.randomUUIDv7`. `new UniqueEntityId(value)` stores that string. Move to `EntityId` or `EntityId.withDefault`.
+**EntityId.** Ships in 1.6.0, together with `EntityId.withDefault(fn)`. Stores the id string. `toValue()` is what you pass to `findById`. `equals()` compares two ids. `new EntityId()` stores no id, so the insert omits the column and the database assigns the key. `new EntityId(value)` stores that string. A blank string throws. `withDefault(fn)` returns the `EntityId` class. Omitting the argument stores `fn()`. Passing a string stores that string. The project defines its own constructor with `EntityId.withDefault(fn)`. `UniqueEntityId` exported by Archstone is deprecated and will be removed in 2.0. Until then `new UniqueEntityId()` still generates a UUID v7 with `Bun.randomUUIDv7`. `new UniqueEntityId(value)` stores that string. New code does not import `UniqueEntityId` from Archstone.
 
 **WatchedList.** Subclass it, implement `compareItems`, then read `getNewItems()` and `getRemovedItems()`. Both are measured against the list the collection was created with. `update()` replaces the items and recomputes that same diff. The getters return copies.
 
